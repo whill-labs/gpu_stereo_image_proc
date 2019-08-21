@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
-project(stereo_image_proc)
+project(gpu_stereo_image_proc)
 
 find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_proc image_transport message_filters nodelet sensor_msgs stereo_msgs)
 find_package(Boost REQUIRED COMPONENTS thread)
 
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
-  add_compile_options(-std=c++11)
+  add_compile_options(-std=c++14)
 endif()
 
 # Dynamic reconfigure support
@@ -26,7 +26,7 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 
 # Nodelet library
-add_library(${PROJECT_NAME} src/libstereo_image_proc/processor.cpp src/nodelets/disparity.cpp src/nodelets/point_cloud2.cpp)
+add_library(${PROJECT_NAME} src/libgpu_stereo_image_proc/sgbm_processor.cpp src/nodelets/disparity.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}
 )
@@ -40,8 +40,8 @@ install(FILES nodelet_plugins.xml
 
 # Standalone node
 add_executable(stereoimageproc_exe src/nodes/stereo_image_proc.cpp)
-target_link_libraries(stereoimageproc_exe stereo_image_proc)
-SET_TARGET_PROPERTIES(stereoimageproc_exe PROPERTIES OUTPUT_NAME stereo_image_proc)
+target_link_libraries(stereoimageproc_exe ${PROJECT_NAME})
+SET_TARGET_PROPERTIES(stereoimageproc_exe PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 install(TARGETS stereoimageproc_exe
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
