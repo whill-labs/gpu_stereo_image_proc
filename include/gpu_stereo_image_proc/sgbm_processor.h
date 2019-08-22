@@ -73,6 +73,11 @@ public:
     ALL        = LEFT_ALL | RIGHT_ALL | STEREO_ALL
   };
 
+  StereoSGBMProcessor()
+    : image_size_(640, 480), uniqueness_ratio_(0.9f), min_disparity_(0), max_disparity_(128), P1_(8), P2_(109)
+  {
+  }
+
   int  getInterpolation() const;
   void setInterpolation(int interp);
 
@@ -107,16 +112,17 @@ public:
   void processPoints2(const stereo_msgs::DisparityImage& disparity, const cv::Mat& coloer, const std::string& encoding,
                       const image_geometry::StereoCameraModel& model, sensor_msgs::PointCloud2& points) const;
 
-private:
+protected:
   image_proc::Processor       mono_processor_;
   mutable cv::Mat_<int16_t>   disparity16_;
   mutable cv::Mat_<cv::Vec3f> dense_points_;
 
-  float uniqueness_ratio_;
-  int   min_disparity_;
-  int   max_disparity_;
-  int   P1_;
-  int   P2_;
+  cv::Size image_size_;
+  float    uniqueness_ratio_;
+  int      min_disparity_;
+  int      max_disparity_;
+  int      P1_;
+  int      P2_;
 };
 
 inline int StereoSGBMProcessor::getInterpolation() const

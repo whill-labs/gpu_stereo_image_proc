@@ -55,7 +55,7 @@
 #include "gpu_stereo_image_proc/DisparityConfig.h"
 #include <dynamic_reconfigure/server.h>
 
-#include "gpu_stereo_image_proc/sgbm_processor.h"
+#include "gpu_stereo_image_proc/vx_sgbm_processor.h"
 
 namespace gpu_stereo_image_proc
 {
@@ -87,8 +87,8 @@ class DisparityNodelet : public nodelet::Nodelet
   boost::shared_ptr<ReconfigureServer>           reconfigure_server_;
 
   // Processing state (note: only safe because we're single-threaded!)
-  image_geometry::StereoCameraModel          model_;
-  gpu_stereo_image_proc::StereoSGBMProcessor block_matcher_;  // contains scratch buffers for block matching
+  image_geometry::StereoCameraModel            model_;
+  gpu_stereo_image_proc::VXStereoSGBMProcessor block_matcher_;  // contains scratch buffers for block matching
 
   virtual void onInit();
 
@@ -227,7 +227,7 @@ void DisparityNodelet::configCb(Config& config, uint32_t level)
   // block_matcher_.setSgbmMode(config.fullDP);
   block_matcher_.setP1(config.P1);
   block_matcher_.setP2(config.P2);
-  // block_matcher_.setDisp12MaxDiff(config.disp12MaxDiff);
+  block_matcher_.setDisp12MaxDiff(config.disp12MaxDiff);
 }
 
 }  // namespace gpu_stereo_image_proc

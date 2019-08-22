@@ -23,16 +23,17 @@ public:
   VXStereoMatcher& operator=(VXStereoMatcher&& obj);
 
   void operator()(cv::InputArray left, cv::InputArray right, cv::OutputArray disparity);
+  void compute(cv::InputArray left, cv::InputArray right, cv::OutputArray disparity);
 
 private:
   vx_context context_;
-  vx_graph graph_;
-  vx_image left_image_;
-  vx_image right_image_;
-  vx_image left_scaled_;
-  vx_image right_scaled_;
-  vx_image disparity_scaled_;
-  vx_image disparity_;
+  vx_graph   graph_;
+  vx_image   left_image_;
+  vx_image   right_image_;
+  vx_image   left_scaled_;
+  vx_image   right_scaled_;
+  vx_image   disparity_scaled_;
+  vx_image   disparity_;
 
   // noncopyable
   VXStereoMatcher(const VXStereoMatcher&) = delete;

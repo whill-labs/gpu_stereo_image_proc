@@ -26,7 +26,9 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 
 # Nodelet library
-add_library(${PROJECT_NAME} src/libgpu_stereo_image_proc/sgbm_processor.cpp src/nodelets/disparity.cpp)
+add_library(${PROJECT_NAME} src/libgpu_stereo_image_proc/vx_sgbm_processor.cpp 
+                            src/libgpu_stereo_image_proc/sgbm_processor.cpp 
+                            src/nodelets/disparity.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}
 )
