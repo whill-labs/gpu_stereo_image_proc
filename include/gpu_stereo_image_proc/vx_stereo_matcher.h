@@ -12,9 +12,11 @@ class VXStereoMatcher
 public:
   VXStereoMatcher();
 
-  VXStereoMatcher(int image_width, int image_height, int down_scale, const int uniqueness_ratio = 0,
-                  const int max_diff = 16, const int hc_win_size = 1, const int ct_win_size = 0, const int clip = 31,
-                  const int P2 = 109, const int P1 = 8, const int max_disparity = 64, const int min_disparity = 0);
+  VXStereoMatcher(const int image_width, const int image_height, const int shrink_scale, const int min_disparity = 0,
+                  const int max_disparity = 64, const int P1 = 8, const int P2 = 109, const int sad_win_size = 5,
+                  const int ct_win_size = 0, const int hc_win_size = 1, const int clip = 31, const int max_diff = 16,
+                  const int uniqueness_ratio = 50, enum nvx_scanline_e scanline_mask = NVX_SCANLINE_CROSS,
+                  enum nvx_sgm_flags_e flags = NVX_SGM_PYRAMIDAL_STEREO);
 
   VXStereoMatcher(VXStereoMatcher&& obj);
 
@@ -22,7 +24,6 @@ public:
 
   VXStereoMatcher& operator=(VXStereoMatcher&& obj);
 
-  void operator()(cv::InputArray left, cv::InputArray right, cv::OutputArray disparity);
   void compute(cv::InputArray left, cv::InputArray right, cv::OutputArray disparity);
 
 private:

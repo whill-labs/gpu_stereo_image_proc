@@ -57,80 +57,100 @@ public:
                                               min_disparity_));
   }
 
-  int  getDisp12MaxDiff() const;
-  void setDisp12MaxDiff(int max_diff);
+  float getUniquenessRatio() const
+  {
+    return static_cast<float>(uniqueness_ratio_) * 0.01;
+  }
+  bool setUniqunessRatio(float ratio)
+  {
+    if(ratio < 0.0 || ratio > 1.0)
+      return false;
+    uniqueness_ratio_ = static_cast<int>(ratio * 100.0);
+    return true;
+  }
 
-  int  getHcWinSize() const;
-  void setHcWinSize(int hc_win_size);
+  bool setMinDisparity(int min_d)
+  {
+    if(min_d > getMaxDisparity())
+      return false;
+    min_disparity_ = min_d;
+    return true;
+  }
 
-  int  getCtWinSize() const;
-  void setCtWinSize(int ct_win_size);
+  bool setMaxDisparity(int max_d)
+  {
+    if(max_d < getMinDisparity())
+      return false;
+    max_disparity_ = max_d;
+    return true;
+  }
 
-  int  getClip() const;
-  void setClip(int clip);
+  int getDisp12MaxDiff() const
+  {
+    return max_diff_;
+  }
+  void setDisp12MaxDiff(int max_diff)
+  {
+    max_diff_ = max_diff;
+  }
 
-  int  getShrinkScale() const;
-  void setShrinkScale(int shrink_scale);
+  int getCorrelationWindowSize() const
+  {
+    return sad_win_size_;
+  }
+  void setCorrelationWindowSize(int sad_win_size)
+  {
+    sad_win_size_ = sad_win_size;
+  }
+
+  int getHcWinSize() const
+  {
+    return hc_win_size_;
+  }
+  void setHcWinSize(int hc_win_size)
+  {
+    hc_win_size_ = hc_win_size;
+  }
+
+  int getCtWinSize() const
+  {
+    return ct_win_size_;
+  }
+  void setCtWinSize(int ct_win_size)
+  {
+    ct_win_size_ = ct_win_size;
+  }
+
+  int getClip() const
+  {
+    return clip_;
+  }
+  void setClip(int clip)
+  {
+    clip_ = clip;
+  }
+
+  int getShrinkScale() const
+  {
+    return shirink_scale_;
+  }
+  void setShrinkScale(int shrink_scale)
+  {
+    shirink_scale_ = shrink_scale;
+  }
 
 private:
   std::shared_ptr<VXStereoMatcher> stereo_matcher_;
 
   int max_diff_;
+  int sad_win_size_;
   int hc_win_size_;
   int ct_win_size_;
   int clip_;
   int shirink_scale_;
+  int uniqueness_ratio_;
 };
 
-inline int VXStereoSGBMProcessor::getDisp12MaxDiff() const
-{
-  return max_diff_;
-}
-
-inline void VXStereoSGBMProcessor::setDisp12MaxDiff(int max_diff)
-{
-  max_diff_ = max_diff;
-}
-
-inline int VXStereoSGBMProcessor::getHcWinSize() const
-{
-  return hc_win_size_;
-}
-
-inline void VXStereoSGBMProcessor::setHcWinSize(int hc_win_size)
-{
-  hc_win_size_ = hc_win_size;
-}
-
-inline int VXStereoSGBMProcessor::getCtWinSize() const
-{
-  return ct_win_size_;
-}
-
-inline void VXStereoSGBMProcessor::setCtWinSize(int ct_win_size)
-{
-  ct_win_size_ = ct_win_size;
-}
-
-inline int VXStereoSGBMProcessor::getClip() const
-{
-  return clip_;
-}
-
-inline void VXStereoSGBMProcessor::setClip(int clip)
-{
-  clip_ = clip;
-}
-
-inline int VXStereoSGBMProcessor::getShrinkScale() const
-{
-  return shirink_scale_;
-}
-
-inline void VXStereoSGBMProcessor::setShrinkScale(int shrink_scale)
-{
-  shirink_scale_ = shrink_scale;
-}
 }  // namespace gpu_stereo_image_proc
 
 #endif

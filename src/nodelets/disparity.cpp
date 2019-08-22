@@ -173,7 +173,6 @@ void DisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInf
   disp_msg->image.header     = l_info_msg->header;
 
   // Compute window of (potentially) valid disparities
-  /*
   int border = block_matcher_.getCorrelationWindowSize() / 2;
   int left   = block_matcher_.getDisparityRange() + block_matcher_.getMinDisparity() + border - 1;
   int wtf    = (block_matcher_.getMinDisparity() >= 0) ? border + block_matcher_.getMinDisparity() :
@@ -185,7 +184,6 @@ void DisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInf
   disp_msg->valid_window.y_offset = top;
   disp_msg->valid_window.width    = right - left;
   disp_msg->valid_window.height   = bottom - top;
-  */
 
   // Create cv::Mat views onto all buffers
   const cv::Mat_<uint8_t> l_image = cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::MONO8)->image;
@@ -218,7 +216,7 @@ void DisparityNodelet::configCb(Config& config, uint32_t level)
   // Note: With single-threaded NodeHandle, configCb and imageCb can't be called
   // concurrently, so this is thread-safe.
   // block_matcher_.setPreFilterCap(config.prefilter_cap);
-  // block_matcher_.setCorrelationWindowSize(config.correlation_window_size);
+  block_matcher_.setCorrelationWindowSize(config.correlation_window_size);
   block_matcher_.setMinDisparity(config.min_disparity);
   block_matcher_.setDisparityRange(config.disparity_range);
   block_matcher_.setUniquenessRatio(config.uniqueness_ratio);
@@ -228,6 +226,8 @@ void DisparityNodelet::configCb(Config& config, uint32_t level)
   block_matcher_.setP1(config.P1);
   block_matcher_.setP2(config.P2);
   block_matcher_.setDisp12MaxDiff(config.disp12MaxDiff);
+
+  block_matcher_.applyConfig();
 }
 
 }  // namespace gpu_stereo_image_proc

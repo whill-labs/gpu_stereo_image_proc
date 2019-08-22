@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 
-#include "gpu_stereo_image_proc/vx_stereo_matcher.hpp"
+#include "gpu_stereo_image_proc/vx_stereo_matcher.h"
 
 #define VX_CHECK_STATUS(s)                                                                                             \
   do                                                                                                                   \
@@ -38,7 +38,7 @@ void copy_to_vx_image(vx_image dest, cv::InputArray src)
   rect.end_y   = height;
 
   const auto status = vxCopyImagePatch(dest, &rect, 0, &addr, src_mat.data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
-  ROS_ASSERT(status == VX_SUCCESS);
+  // ROS_ASSERT(status == VX_SUCCESS);
 }
 
 void copy_from_vx_image(cv::OutputArray dest, vx_image src)
@@ -100,9 +100,11 @@ VXStereoMatcher::VXStereoMatcher()
 {
 }
 
-VXStereoMatcher::VXStereoMatcher(int image_width, int image_height, int down_scale, const int uniqueness_ratio,
-                                 const int max_diff, const int hc_win_size, const int ct_win_size, const int clip,
-                                 const int P2, const int P1, const int max_disparity, const int min_disparity)
+VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, const int shrink_scale,
+                                 const int min_disparity, const int max_disparity, const int P1, const int P2,
+                                 const int sad_win_size, const int ct_win_size, const int hc_win_size, const int clip,
+                                 const int max_diff, const int uniqueness_ratio, enum nvx_scanline_e scanline_mask,
+                                 enum nvx_sgm_flags_e flags)
   : context_(nullptr)
   , graph_(nullptr)
   , left_image_(nullptr)
@@ -124,38 +126,44 @@ VXStereoMatcher::VXStereoMatcher(int image_width, int image_height, int down_sca
   VX_CHECK_STATUS(vxGetStatus((vx_reference)left_image_));
   right_image_ = vxCreateImage(context_, image_width, image_height, VX_DF_IMAGE_U8);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)right_image_));
-  left_scaled_ = vxCreateImage(context_, image_width / down_scale, image_height / down_scale, VX_DF_IMAGE_U8);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
-  right_scaled_ = vxCreateImage(context_, image_width / down_scale, image_height / down_scale, VX_DF_IMAGE_U8);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
-  disparity_scaled_ = vxCreateImage(context_, image_width / down_scale, image_height / down_scale, VX_DF_IMAGE_S16);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_scaled_));
   disparity_ = vxCreateImage(context_, image_width, image_height, VX_DF_IMAGE_S16);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_));
 
-  vx_node left_scale_node = vxScaleImageNode(graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
-  VX_CHECK_STATUS(vxVerifyGraph(graph_));
-  vx_node right_scale_node = vxScaleImageNode(graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
-  VX_CHECK_STATUS(vxVerifyGraph(graph_));
+  if(shrink_scale > 1)
+  {
+    left_scaled_ = vxCreateImage(context_, image_width / shrink_scale, image_height / shrink_scale, VX_DF_IMAGE_U8);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
+    right_scaled_ = vxCreateImage(context_, image_width / shrink_scale, image_height / shrink_scale, VX_DF_IMAGE_U8);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
+    disparity_scaled_ =
+        vxCreateImage(context_, image_width / shrink_scale, image_height / shrink_scale, VX_DF_IMAGE_S16);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_scaled_));
 
-  const int sad = 5;
+    vx_node left_scale_node = vxScaleImageNode(graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    vx_node right_scale_node = vxScaleImageNode(graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-  vx_node sgm_node = nvxSemiGlobalMatchingNode(graph_, left_scaled_, right_scaled_, disparity_scaled_, min_disparity,
-                                               max_disparity, P1, P2, sad, ct_win_size, hc_win_size, clip, max_diff,
-                                               uniqueness_ratio, NVX_SCANLINE_ALL, NVX_SGM_PYRAMIDAL_STEREO);
-  ROS_ASSERT(sgm_node);
+    vx_node sgm_node = nvxSemiGlobalMatchingNode(
+        graph_, left_scaled_, right_scaled_, disparity_scaled_, min_disparity, max_disparity, P1, P2, sad_win_size,
+        ct_win_size, hc_win_size, clip, max_diff, uniqueness_ratio, NVX_SCANLINE_ALL, NVX_SGM_PYRAMIDAL_STEREO);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    vx_node disparity_scale_node = vxScaleImageNode(graph_, disparity_scaled_, disparity_, VX_INTERPOLATION_BILINEAR);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-  // const auto verify_status = vxVerifyGraph(graph_);
-  // VX_CHECK_STATUS(verify_status);
-  VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-  vx_node disparity_scale_node = vxScaleImageNode(graph_, disparity_scaled_, disparity_, VX_INTERPOLATION_BILINEAR);
-  VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-  vxReleaseNode(&left_scale_node);
-  vxReleaseNode(&right_scale_node);
-  vxReleaseNode(&disparity_scale_node);
-  vxReleaseNode(&sgm_node);
+    vxReleaseNode(&left_scale_node);
+    vxReleaseNode(&right_scale_node);
+    vxReleaseNode(&disparity_scale_node);
+    vxReleaseNode(&sgm_node);
+  }
+  else
+  {
+    vx_node sgm_node = nvxSemiGlobalMatchingNode(
+        graph_, left_image_, right_image_, disparity_, min_disparity, max_disparity, P1, P2, sad_win_size, ct_win_size,
+        hc_win_size, clip, max_diff, uniqueness_ratio, NVX_SCANLINE_ALL, NVX_SGM_PYRAMIDAL_STEREO);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    vxReleaseNode(&sgm_node);
+  }
 }
 
 VXStereoMatcher::VXStereoMatcher(VXStereoMatcher&& obj)
@@ -196,17 +204,6 @@ VXStereoMatcher& VXStereoMatcher::operator=(VXStereoMatcher&& obj)
   obj.disparity_   = 0;
 
   return *this;
-}
-
-void VXStereoMatcher::operator()(cv::InputArray left, cv::InputArray right, cv::OutputArray disparity)
-{
-  copy_to_vx_image(left_image_, left);
-  copy_to_vx_image(right_image_, right);
-
-  const auto status = vxProcessGraph(graph_);
-  ROS_ASSERT(status == VX_SUCCESS);
-
-  copy_from_vx_image(disparity, disparity_);
 }
 
 void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right, cv::OutputArray disparity)
