@@ -19,18 +19,38 @@ catkin_package(
 
 include_directories(include)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED) 
 include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+find_package(VisionWorks REQUIRED)
+include_directories(${VisionWorks_INCLUDE_DIRS})
+find_package(LibSGM REQUIRED)
+include_directories(${LibSGM_INCLUDE_DIRS})
+
 
 # See note in image_proc/CMakeLists.txt
 add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 
 # Nodelet library
-add_library(${PROJECT_NAME} src/libgpu_stereo_image_proc/vx_sgbm_processor.cpp 
-                            src/libgpu_stereo_image_proc/sgbm_processor.cpp 
-                            src/nodelets/disparity.cpp)
+add_library(${PROJECT_NAME} 
+            src/libgpu_stereo_image_proc/vx_stereo_matcher.cpp
+            src/libgpu_stereo_image_proc/vx_sgbm_processor.cpp 
+            src/libgpu_stereo_image_proc/sgbm_processor.cpp 
+            src/nodelets/disparity.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}
+                                      ${VisionWorks_LIBRARIES}
+)
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
+install(TARGETS ${PROJECT_NAME}
+        DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+add_library(libsgm-disparity
+            src/libgpu_stereo_image_proc/libsgm_sgbm_processor.cpp 
+            src/libgpu_stereo_image_proc/sgbm_processor.cpp 
+            src/nodelets/libsgm_disparity.cpp)
+target_link_libraries(libsgm-disparity ${catkin_LIBRARIES}
+                                       ${OpenCV_LIBRARIES}
+                                       ${LibSGM_LIBRARIES}
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 install(TARGETS ${PROJECT_NAME}

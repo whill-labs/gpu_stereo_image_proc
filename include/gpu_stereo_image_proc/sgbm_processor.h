@@ -73,16 +73,15 @@ public:
     ALL        = LEFT_ALL | RIGHT_ALL | STEREO_ALL
   };
 
-  StereoSGBMProcessor()
-    : image_size_(640, 480), uniqueness_ratio_(0.9f), min_disparity_(0), max_disparity_(128), P1_(8), P2_(109)
+  StereoSGBMProcessor() : image_size_(640, 480), min_disparity_(0), max_disparity_(128), P1_(8), P2_(109)
   {
   }
 
   int  getInterpolation() const;
   void setInterpolation(int interp);
 
-  float        getUniquenessRatio() const;
-  virtual bool setUniquenessRatio(float ratio);
+  virtual float getUniquenessRatio() const;
+  virtual bool  setUniquenessRatio(float ratio);
 
   int          getMinDisparity() const;
   virtual bool setMinDisparity(int min_d);
@@ -118,7 +117,6 @@ protected:
   mutable cv::Mat_<cv::Vec3f> dense_points_;
 
   cv::Size image_size_;
-  float    uniqueness_ratio_;
   int      min_disparity_;
   int      max_disparity_;
   int      P1_;
@@ -135,11 +133,6 @@ inline void StereoSGBMProcessor::setInterpolation(int interp)
   mono_processor_.interpolation_ = interp;
 }
 
-inline float StereoSGBMProcessor::getUniquenessRatio() const
-{
-  return uniqueness_ratio_;
-}
-
 inline int StereoSGBMProcessor::getMinDisparity() const
 {
   return min_disparity_;
@@ -152,16 +145,15 @@ inline int StereoSGBMProcessor::getMaxDisparity() const
 
 inline int StereoSGBMProcessor::getDisparityRange() const
 {
-  return (max_disparity_ - min_disparity_);
+  return (max_disparity_ - min_disparity_ + 1);
 }
 
 inline bool StereoSGBMProcessor::setDisparityRange(int range)
 {
   if(range < 0)
     return false;
-  return StereoSGBMProcessor::setMaxDisparity(min_disparity_ + range);
+  return StereoSGBMProcessor::setMaxDisparity(min_disparity_ + range - 1);
 }
-
 inline StereoSGBMProcessor::ImageProcFlag operator|(StereoSGBMProcessor::ImageProcFlag lhs,
                                                     StereoSGBMProcessor::ImageProcFlag rhs)
 {
