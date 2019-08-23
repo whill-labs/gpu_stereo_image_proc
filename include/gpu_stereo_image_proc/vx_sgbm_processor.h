@@ -33,6 +33,7 @@
  *********************************************************************/
 #ifndef GPU_STEREO_IMAGE_PROC_VX_SGBM_PROCESSOR_H
 #define GPU_STEREO_IMAGE_PROC_VX_SGBM_PROCESSOR_H
+#include <ros/ros.h>
 #include "gpu_stereo_image_proc/sgbm_processor.h"
 #include "gpu_stereo_image_proc/vx_stereo_matcher.h"
 
@@ -41,9 +42,9 @@ namespace gpu_stereo_image_proc
 class VXStereoSGBMProcessor : public StereoSGBMProcessor
 {
 public:
-  VXStereoSGBMProcessor() : max_diff_(16), hc_win_size_(1), ct_win_size_(0), clip_(31), shirink_scale_(1)
+  VXStereoSGBMProcessor() : max_diff_(16), hc_win_size_(1), ct_win_size_(0), clip_(31), shrink_scale_(1), uniqueness_ratio_(15)
   {
-    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shirink_scale_));
+    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height));
   }
 
   virtual void processDisparity(const cv::Mat& left_rect, const cv::Mat& right_rect,
@@ -52,9 +53,16 @@ public:
 
   void applyConfig()
   {
-    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shirink_scale_, uniqueness_ratio_,
-                                              max_diff_, hc_win_size_, ct_win_size_, clip_, P2_, P1_, max_disparity_,
-                                              min_disparity_));
+    ROS_INFO("===================================");
+    ROS_INFO("image_size  : w %d, h %d", image_size_.width, image_size_.height);
+    ROS_INFO("shrink_scale: %d", shrink_scale_);
+    ROS_INFO("UR          : %d", uniqueness_ratio_);
+    ROS_INFO("Max Diff    : %d", max_diff_);
+    ROS_INFO("Win Size    : SAD %d, CT %d, HC %d", sad_win_size_, ct_win_size_, hc_win_size_);
+    ROS_INFO("Clip        : %d", clip_);
+    ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity_, max_disparity_);
+    ROS_INFO("===================================");
+    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shrink_scale_, min_disparity_, max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_, clip_, max_diff_, uniqueness_ratio_));
   }
 
   float getUniquenessRatio() const
@@ -132,11 +140,11 @@ public:
 
   int getShrinkScale() const
   {
-    return shirink_scale_;
+    return shrink_scale_;
   }
   void setShrinkScale(int shrink_scale)
   {
-    shirink_scale_ = shrink_scale;
+    shrink_scale_ = shrink_scale;
   }
 
 private:
@@ -147,7 +155,7 @@ private:
   int hc_win_size_;
   int ct_win_size_;
   int clip_;
-  int shirink_scale_;
+  int shrink_scale_;
   int uniqueness_ratio_;
 };
 

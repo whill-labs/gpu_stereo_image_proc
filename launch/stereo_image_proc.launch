@@ -26,7 +26,7 @@
 
   <!-- Disparity image -->
   <node pkg="nodelet" type="nodelet" name="disparity"
-        args="load stereo_image_proc/disparity $(arg manager) $(arg bond)"
+        args="load gpu_stereo_image_proc/disparity $(arg manager) $(arg bond)"
 	respawn="$(arg respawn)" >
     <param name="approximate_sync" value="$(arg approximate_sync)" />
   </node>

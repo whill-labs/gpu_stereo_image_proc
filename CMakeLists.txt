@@ -5,7 +5,7 @@ find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_
 find_package(Boost REQUIRED COMPONENTS thread)
 
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
-  add_compile_options(-std=c++14)
+  add_compile_options(-std=c++14 )
 endif()
 
 # Dynamic reconfigure support

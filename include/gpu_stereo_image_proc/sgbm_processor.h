@@ -77,14 +77,16 @@ public:
   {
   }
 
+  virtual ~StereoSGBMProcessor(){};
+
   int  getInterpolation() const;
   void setInterpolation(int interp);
 
-  virtual float getUniquenessRatio() const;
-  virtual bool  setUniquenessRatio(float ratio);
+  virtual float getUniquenessRatio() const {};
+  virtual bool  setUniquenessRatio(float ratio) = 0;
 
   int          getMinDisparity() const;
-  virtual bool setMinDisparity(int min_d);
+  virtual bool setMinDisparity(int min_d) = 0;
 
   int          getMaxDisparity() const;
   virtual bool setMaxDisparity(int max_d);
@@ -92,11 +94,15 @@ public:
   int  getDisparityRange() const;
   bool setDisparityRange(int range);
 
-  int  getP1() const;
-  void setP1(int P1);
+  int  getP1() const
+  {return P1_;}
+  void setP1(int P1)
+  {P1_ = P1;}
 
-  int  getP2() const;
-  void setP2(int P2);
+  int  getP2() const
+  {return P2_;}
+  void setP2(int P2)
+  {P2_ = P2;}
 
   bool process(const sensor_msgs::ImageConstPtr& left_raw, const sensor_msgs::ImageConstPtr& right_raw,
                const image_geometry::StereoCameraModel& model, StereoImageSet& output, ImageProcFlag flags) const;
@@ -141,6 +147,11 @@ inline int StereoSGBMProcessor::getMinDisparity() const
 inline int StereoSGBMProcessor::getMaxDisparity() const
 {
   return max_disparity_;
+}
+inline bool StereoSGBMProcessor::setMaxDisparity(int max_d)
+{
+  max_disparity_ = max_d;
+  return true;
 }
 
 inline int StereoSGBMProcessor::getDisparityRange() const
