@@ -33,6 +33,7 @@
  *********************************************************************/
 #ifndef GPU_STEREO_IMAGE_PROC_SGBM_PROCESSOR_H
 #define GPU_STEREO_IMAGE_PROC_SGBM_PROCESSOR_H
+#include <ros/ros.h>
 #include <image_geometry/stereo_camera_model.h>
 #include <image_proc/processor.h>
 #include <sensor_msgs/PointCloud.h>
@@ -97,12 +98,20 @@ public:
   int  getP1() const
   {return P1_;}
   void setP1(int P1)
-  {P1_ = P1;}
+  {
+    ROS_INFO("%s, in %d", __func__, P1);
+    P1_ = P1;
+  }
 
   int  getP2() const
-  {return P2_;}
+  {
+    return P2_;
+  }
   void setP2(int P2)
-  {P2_ = P2;}
+  {
+    ROS_INFO("%s, in %d", __func__, P2);
+    P2_ = P2;
+  }
 
   bool process(const sensor_msgs::ImageConstPtr& left_raw, const sensor_msgs::ImageConstPtr& right_raw,
                const image_geometry::StereoCameraModel& model, StereoImageSet& output, ImageProcFlag flags) const;
@@ -150,20 +159,22 @@ inline int StereoSGBMProcessor::getMaxDisparity() const
 }
 inline bool StereoSGBMProcessor::setMaxDisparity(int max_d)
 {
+  ROS_INFO("%s, in %d", __func__, max_d);
   max_disparity_ = max_d;
   return true;
 }
 
 inline int StereoSGBMProcessor::getDisparityRange() const
 {
-  return (max_disparity_ - min_disparity_ + 1);
+  return (max_disparity_ - min_disparity_);
 }
 
 inline bool StereoSGBMProcessor::setDisparityRange(int range)
 {
+  ROS_INFO("%s, in %d", __func__, range);
   if(range < 0)
     return false;
-  return StereoSGBMProcessor::setMaxDisparity(min_disparity_ + range - 1);
+  return StereoSGBMProcessor::setMaxDisparity(min_disparity_ + range);
 }
 inline StereoSGBMProcessor::ImageProcFlag operator|(StereoSGBMProcessor::ImageProcFlag lhs,
                                                     StereoSGBMProcessor::ImageProcFlag rhs)
