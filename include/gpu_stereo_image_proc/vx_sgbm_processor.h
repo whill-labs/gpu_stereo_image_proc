@@ -61,7 +61,7 @@ public:
   {
     return static_cast<float>(uniqueness_ratio_) * 0.01;
   }
-  bool setUniqunessRatio(float ratio)
+  bool setUniquenessRatio(float ratio)
   {
     if(ratio < 0.0 || ratio > 1.0)
       return false;
