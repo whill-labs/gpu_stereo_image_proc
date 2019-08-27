@@ -63,7 +63,7 @@ using namespace sensor_msgs;
 using namespace stereo_msgs;
 using namespace message_filters::sync_policies;
 
-class DisparityNodelet : public nodelet::Nodelet
+class VXDisparityNodelet : public nodelet::Nodelet
 {
   boost::shared_ptr<image_transport::ImageTransport> it_;
 
@@ -100,7 +100,7 @@ class DisparityNodelet : public nodelet::Nodelet
   void configCb(Config& config, uint32_t level);
 };
 
-void DisparityNodelet::onInit()
+void VXDisparityNodelet::onInit()
 {
   ros::NodeHandle& nh         = getNodeHandle();
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
@@ -117,28 +117,28 @@ void DisparityNodelet::onInit()
   {
     approximate_sync_.reset(
         new ApproximateSync(ApproximatePolicy(queue_size), sub_l_image_, sub_l_info_, sub_r_image_, sub_r_info_));
-    approximate_sync_->registerCallback(boost::bind(&DisparityNodelet::imageCb, this, _1, _2, _3, _4));
+    approximate_sync_->registerCallback(boost::bind(&VXDisparityNodelet::imageCb, this, _1, _2, _3, _4));
   }
   else
   {
     exact_sync_.reset(new ExactSync(ExactPolicy(queue_size), sub_l_image_, sub_l_info_, sub_r_image_, sub_r_info_));
-    exact_sync_->registerCallback(boost::bind(&DisparityNodelet::imageCb, this, _1, _2, _3, _4));
+    exact_sync_->registerCallback(boost::bind(&VXDisparityNodelet::imageCb, this, _1, _2, _3, _4));
   }
 
   // Set up dynamic reconfiguration
-  ReconfigureServer::CallbackType f = boost::bind(&DisparityNodelet::configCb, this, _1, _2);
+  ReconfigureServer::CallbackType f = boost::bind(&VXDisparityNodelet::configCb, this, _1, _2);
   reconfigure_server_.reset(new ReconfigureServer(config_mutex_, private_nh));
   reconfigure_server_->setCallback(f);
 
   // Monitor whether anyone is subscribed to the output
-  ros::SubscriberStatusCallback connect_cb = boost::bind(&DisparityNodelet::connectCb, this);
+  ros::SubscriberStatusCallback connect_cb = boost::bind(&VXDisparityNodelet::connectCb, this);
   // Make sure we don't enter connectCb() between advertising and assigning to pub_disparity_
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
   pub_disparity_ = nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
 }
 
 // Handles (un)subscribing when clients (un)subscribe
-void DisparityNodelet::connectCb()
+void VXDisparityNodelet::connectCb()
 {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
   if(pub_disparity_.getNumSubscribers() == 0)
@@ -161,7 +161,7 @@ void DisparityNodelet::connectCb()
   }
 }
 
-void DisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInfoConstPtr& l_info_msg,
+void VXDisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInfoConstPtr& l_info_msg,
                                const ImageConstPtr& r_image_msg, const CameraInfoConstPtr& r_info_msg)
 {
   // Update the camera model
@@ -205,7 +205,7 @@ void DisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInf
   pub_disparity_.publish(disp_msg);
 }
 
-void DisparityNodelet::configCb(Config& config, uint32_t level)
+void VXDisparityNodelet::configCb(Config& config, uint32_t level)
 {
   // Tweak all settings to be valid
   config.prefilter_size |= 0x1;                                 // must be odd
@@ -234,4 +234,4 @@ void DisparityNodelet::configCb(Config& config, uint32_t level)
 
 // Register nodelet
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(gpu_stereo_image_proc::DisparityNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(gpu_stereo_image_proc::VXDisparityNodelet, nodelet::Nodelet)

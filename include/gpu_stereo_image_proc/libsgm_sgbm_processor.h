@@ -56,7 +56,7 @@ public:
     stereo_matcher_.reset(new sgm::LibSGMWrapper(max_disparity_, P1_, P2_, uniqueness_ratio_, true));
   }
 
-  float getUniquenessRation() const
+  float getUniquenessRatio() const
   {
     return uniqueness_ratio_;
   }

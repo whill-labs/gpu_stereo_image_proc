@@ -24,47 +24,53 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 find_package(VisionWorks REQUIRED)
 include_directories(${VisionWorks_INCLUDE_DIRS})
 find_package(LibSGM REQUIRED)
-include_directories(${LibSGM_INCLUDE_DIRS})
+include_directories(${LIBSGM_INCLUDE_DIRS})
+message(STATUS "LIBSGM_INCLUDE_DIRS=${LIBSGM_INCLUDE_DIRS}")
+message(STATUS "LIBSGM_LIBRARIES=${LIBSGM_LIBRARIES}")
 
 
 # See note in image_proc/CMakeLists.txt
 add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 
 # Nodelet library
-add_library(${PROJECT_NAME} 
+set(VX_NODELET_NAME vx_stereo_image_proc)
+add_library(${VX_NODELET_NAME}
             src/libgpu_stereo_image_proc/vx_stereo_matcher.cpp
             src/libgpu_stereo_image_proc/vx_sgbm_processor.cpp 
             src/libgpu_stereo_image_proc/sgbm_processor.cpp 
-            src/nodelets/disparity.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES}
+            src/nodelets/vx_disparity.cpp)
+target_link_libraries(${VX_NODELET_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}
                                       ${VisionWorks_LIBRARIES}
 )
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
-install(TARGETS ${PROJECT_NAME}
+add_dependencies(${VX_NODELET_NAME} ${PROJECT_NAME}_gencfg)
+install(TARGETS ${VX_NODELET_NAME}
         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
-add_library(libsgm-disparity
+
+set(LIBSGM_NODELET_NAME libsgm_stereo_image_proc)
+add_library(${LIBSGM_NODELET_NAME}
             src/libgpu_stereo_image_proc/libsgm_sgbm_processor.cpp 
             src/libgpu_stereo_image_proc/sgbm_processor.cpp 
             src/nodelets/libsgm_disparity.cpp)
-target_link_libraries(libsgm-disparity ${catkin_LIBRARIES}
-                                       ${OpenCV_LIBRARIES}
-                                       ${LibSGM_LIBRARIES}
+target_link_libraries(${LIBSGM_NODELET_NAME} ${catkin_LIBRARIES}
+                                             ${OpenCV_LIBRARIES}
+                                             ${LIBSGM_LIBRARIES}
 )
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
-install(TARGETS ${PROJECT_NAME}
+add_dependencies(${LIBSGM_NODELET_NAME} ${PROJECT_NAME}_gencfg)
+install(TARGETS ${LIBSGM_NODELET_NAME}
         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
+
 install(FILES nodelet_plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
 # Standalone node
-add_executable(stereoimageproc_exe src/nodes/stereo_image_proc.cpp)
-target_link_libraries(stereoimageproc_exe ${PROJECT_NAME})
-SET_TARGET_PROPERTIES(stereoimageproc_exe PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
-install(TARGETS stereoimageproc_exe
+add_executable(vx_stereoimageproc_exe src/nodes/vx_stereo_image_proc.cpp)
+target_link_libraries(vx_stereoimageproc_exe ${VX_NODELET_NAME})
+SET_TARGET_PROPERTIES(vx_stereoimageproc_exe PROPERTIES OUTPUT_NAME vx_${PROJECT_NAME})
+install(TARGETS vx_stereoimageproc_exe
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

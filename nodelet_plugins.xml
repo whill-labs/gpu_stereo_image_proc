@@ -1,6 +1,14 @@
-<library path="lib/libgpu_stereo_image_proc">
+<library path="lib/libvx_stereo_image_proc">
 
-  <class name="gpu_stereo_image_proc/disparity" type="gpu_stereo_image_proc::DisparityNodelet" base_class_type="nodelet::Nodelet">
+  <class name="gpu_stereo_image_proc/vx_disparity" type="gpu_stereo_image_proc::VXDisparityNodelet" base_class_type="nodelet::Nodelet">
+    <description>Nodelet to perform stereo processing on a pair of rectified image streams, producing disparity images</description>
+  </class>
+
+</library>
+
+<library path="lib/liblibsgm_stereo_image_proc">
+
+  <class name="gpu_stereo_image_proc/libsgm_disparity" type="gpu_stereo_image_proc::LibSGMDisparityNodelet" base_class_type="nodelet::Nodelet">
     <description>Nodelet to perform stereo processing on a pair of rectified image streams, producing disparity images</description>
   </class>
 
