@@ -13,18 +13,6 @@ jobs:
       - checkout
 
       - run:
-          name: Prepare libSGM
-          command: |
-           apt-get update -qq
-           apt-get install -qq git cmake
-           cd ~
-           git clone https://github.com/fixstars/libSGM.git
-           mkdir -p libSGM/build
-           cd libSGM/build
-           cmake -DBUILD_OPENCV_WRAPPER=ON -DLIBSGM_SHARED=ON -DCUDA_ARCH="-arch=sm_70" -DAUTO_DETECT_ARCH=OFF ..
-           make && make install
-      
-      - run:
           name: Resolve dependencies
           command: |
            apt-get update -qq
@@ -35,5 +23,6 @@ jobs:
           command: |
            source /opt/ros/melodic/setup.bash
            cd ~/catkin_ws
-           catkin_make
+           catkin_make -DAUTO_DETECT_ARCH=OFF -DCUDA_ARCH="-arch=sm_72"
+
           

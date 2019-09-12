@@ -24,14 +24,23 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 find_package(VisionWorks REQUIRED)
 include_directories(${VisionWorks_INCLUDE_DIRS})
 
-option(LIBSGM_SHARED        "Build a shared library" OFF)
-option(BUILD_OPENCV_WRAPPER "Make library compatible with cv::Mat and cv::cuda::GpuMat of OpenCV" OFF)
-add_subdirectory(libSGM)
-#find_package(LibSGM REQUIRED)
-include_directories(${LIBSGM_INCLUDE_DIRS})
-message(STATUS "LIBSGM_INCLUDE_DIRS=${LIBSGM_INCLUDE_DIRS}")
-message(STATUS "LIBSGM_LIBRARIES=${LIBSGM_LIBRARIES}")
+include(ExternalProject)
+ExternalProject_Add(
+    ext-libSGM
+    GIT_REPOSITORY "https://github.com/fixstars/libSGM.git"
+    PREFIX      "${CMAKE_CURRENT_BINARY_DIR}/ext/libSGM"
+    INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/libSGM"
+    SOURCE_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/libSGM"
+    CMAKE_ARGS  "-DBUILD_OPENCV_WRAPPER=ON"
+                "-DLIBSGM_SHARED=ON"
+                "-DCUDA_ARCH=${CUDA_ARCH}"
+                "-DAUTO_DETECT_ARCH=${AUTO_DETECT_ARCH}"
+                "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/libSGM"
+    BUILD_ALWAYS ON
+)
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/libSGM/include)
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/libSGM/lib)
 
 # See note in image_proc/CMakeLists.txt
 add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
@@ -59,9 +68,10 @@ add_library(${LIBSGM_NODELET_NAME}
             src/nodelets/libsgm_disparity.cpp)
 target_link_libraries(${LIBSGM_NODELET_NAME} ${catkin_LIBRARIES}
                                              ${OpenCV_LIBRARIES}
-                                             ${LIBSGM_LIBRARIES}
+                                             sgm
 )
-add_dependencies(${LIBSGM_NODELET_NAME} ${PROJECT_NAME}_gencfg)
+
+add_dependencies(${LIBSGM_NODELET_NAME} ext-libSGM ${PROJECT_NAME}_gencfg)
 install(TARGETS ${LIBSGM_NODELET_NAME}
         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
