@@ -9,7 +9,10 @@ if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
 endif()
 
 # Dynamic reconfigure support
-generate_dynamic_reconfigure_options(cfg/Disparity.cfg)
+generate_dynamic_reconfigure_options(
+  cfg/Disparity.cfg
+  cfg/VXSGBM.cfg
+  cfg/LIBSGM.cfg)
 
 catkin_package(
   CATKIN_DEPENDS image_geometry image_proc sensor_msgs stereo_msgs
