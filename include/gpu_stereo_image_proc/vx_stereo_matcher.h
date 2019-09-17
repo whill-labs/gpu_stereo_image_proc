@@ -45,11 +45,11 @@ class VXStereoMatcher
 public:
   VXStereoMatcher();
 
-  VXStereoMatcher(const int image_width, const int image_height, const int shrink_scale = 2, const int min_disparity = 0,
-                  const int max_disparity = 64, const int P1 = 8, const int P2 = 109, const int sad_win_size = 5,
-                  const int ct_win_size = 0, const int hc_win_size = 1, const int clip = 31, const int max_diff = 16,
-                  const int uniqueness_ratio = 50, enum nvx_scanline_e scanline_mask = NVX_SCANLINE_CROSS,
-                  enum nvx_sgm_flags_e flags = NVX_SGM_PYRAMIDAL_STEREO);
+  VXStereoMatcher(const int image_width, const int image_height, const int shrink_scale = 2,
+                  const int min_disparity = 0, const int max_disparity = 64, const int P1 = 8, const int P2 = 109,
+                  const int sad_win_size = 5, const int ct_win_size = 0, const int hc_win_size = 1, const int clip = 31,
+                  const int max_diff = 16, const int uniqueness_ratio = 50,
+                  const int scanline_mask = NVX_SCANLINE_CROSS, const int flags = NVX_SGM_PYRAMIDAL_STEREO);
 
   VXStereoMatcher(VXStereoMatcher&& obj);
 

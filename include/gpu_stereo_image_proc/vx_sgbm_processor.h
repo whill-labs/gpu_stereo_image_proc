@@ -42,7 +42,8 @@ namespace gpu_stereo_image_proc
 class VXStereoSGBMProcessor : public StereoSGBMProcessor
 {
 public:
-  VXStereoSGBMProcessor() : max_diff_(16), hc_win_size_(1), ct_win_size_(0), clip_(31), shrink_scale_(1), uniqueness_ratio_(15)
+  VXStereoSGBMProcessor()
+    : max_diff_(16), hc_win_size_(1), ct_win_size_(0), clip_(31), shrink_scale_(1), uniqueness_ratio_(15)
   {
     stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height));
   }
@@ -63,7 +64,9 @@ public:
     ROS_INFO("Clip        : %d", clip_);
     ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity_, max_disparity_);
     ROS_INFO("===================================");
-    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shrink_scale_, min_disparity_, max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_, clip_, max_diff_, uniqueness_ratio_));
+    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shrink_scale_, min_disparity_,
+                                              max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_,
+                                              clip_, max_diff_, uniqueness_ratio_, scanline_mask_, flags_));
   }
 
   float getUniquenessRatio() const
@@ -160,6 +163,16 @@ public:
     shrink_scale_ = shrink_scale;
   }
 
+  void setFlags(uint8_t flags)
+  {
+    flags_ = flags;
+  }
+
+  void setPathType(uint8_t scanline_mask)
+  {
+    scanline_mask_ = scanline_mask;
+  }
+
 private:
   std::shared_ptr<VXStereoMatcher> stereo_matcher_;
 
@@ -170,6 +183,8 @@ private:
   int clip_;
   int shrink_scale_;
   int uniqueness_ratio_;
+  int scanline_mask_;
+  int flags_;
 };
 
 }  // namespace gpu_stereo_image_proc

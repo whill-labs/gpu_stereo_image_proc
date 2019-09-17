@@ -136,8 +136,8 @@ VXStereoMatcher::VXStereoMatcher()
 VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, const int shrink_scale,
                                  const int min_disparity, const int max_disparity, const int P1, const int P2,
                                  const int sad_win_size, const int ct_win_size, const int hc_win_size, const int clip,
-                                 const int max_diff, const int uniqueness_ratio, enum nvx_scanline_e scanline_mask,
-                                 enum nvx_sgm_flags_e flags)
+                                 const int max_diff, const int uniqueness_ratio, const int scanline_mask,
+                                 const int flags)
   : context_(nullptr)
   , graph_(nullptr)
   , left_image_(nullptr)
@@ -177,9 +177,9 @@ VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, 
     vx_node right_scale_node = vxScaleImageNode(graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_scaled_, right_scaled_, disparity_scaled_, min_disparity, max_disparity, P1, P2, sad_win_size,
-        ct_win_size, hc_win_size, clip, max_diff, uniqueness_ratio, NVX_SCANLINE_ALL, NVX_SGM_PYRAMIDAL_STEREO);
+    vx_node sgm_node = nvxSemiGlobalMatchingNode(graph_, left_scaled_, right_scaled_, disparity_scaled_, min_disparity,
+                                                 max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip,
+                                                 max_diff, uniqueness_ratio, scanline_mask, flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
     vx_node disparity_scale_node = vxScaleImageNode(graph_, disparity_scaled_, disparity_, VX_INTERPOLATION_BILINEAR);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
