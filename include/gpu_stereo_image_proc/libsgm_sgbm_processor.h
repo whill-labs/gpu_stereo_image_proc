@@ -71,32 +71,15 @@ public:
 
   bool setMinDisparity(int min_d)
   {
-    // min_disparity is fixed to zero in libSGM.
-    // Setting minimum disparity is ignored.
-    // See https://github.com/fixstars/libSGM/issues/36
-    return false;
+    min_disparity_ = min_d;
+    return true;
   }
 
   bool setMaxDisparity(int max_d)
   {
-    if(max_d == 64 || max_d == 128)
-    {
-      max_disparity_ = max_d;
-      return true;
-    }
-    return false;
+    max_disparity_ = max_d;
+    return true;
   }
-
-  int getDisp12MaxDiff() const
-  {
-    // Threshold for left-right consistency check is fixed to 1 in libSGM
-    // See https://github.com/fixstars/libSGM/blob/master/src/check_consistency.cu
-    return 1;
-  }
-  void setDisp12MaxDiff(int max_diff)
-  {
-  }
-
   int getCorrelationWindowSize() const
   {
     // Census window size is fixed to 9x7 in libSGM.

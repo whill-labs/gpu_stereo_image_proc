@@ -52,7 +52,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
-#include "gpu_stereo_image_proc/DisparityConfig.h"
+#include "gpu_stereo_image_proc/LIBSGMConfig.h"
 #include <dynamic_reconfigure/server.h>
 
 #include "gpu_stereo_image_proc/libsgm_sgbm_processor.h"
@@ -81,10 +81,10 @@ class LibSGMDisparityNodelet : public nodelet::Nodelet
   ros::Publisher pub_disparity_;
 
   // Dynamic reconfigure
-  boost::recursive_mutex                         config_mutex_;
-  typedef gpu_stereo_image_proc::DisparityConfig Config;
-  typedef dynamic_reconfigure::Server<Config>    ReconfigureServer;
-  boost::shared_ptr<ReconfigureServer>           reconfigure_server_;
+  boost::recursive_mutex                      config_mutex_;
+  typedef gpu_stereo_image_proc::LIBSGMConfig Config;
+  typedef dynamic_reconfigure::Server<Config> ReconfigureServer;
+  boost::shared_ptr<ReconfigureServer>        reconfigure_server_;
 
   // Processing state (note: only safe because we're single-threaded!)
   image_geometry::StereoCameraModel                model_;
@@ -161,7 +161,7 @@ void LibSGMDisparityNodelet::connectCb()
 }
 
 void LibSGMDisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInfoConstPtr& l_info_msg,
-                               const ImageConstPtr& r_image_msg, const CameraInfoConstPtr& r_info_msg)
+                                     const ImageConstPtr& r_image_msg, const CameraInfoConstPtr& r_info_msg)
 {
   // Update the camera model
   model_.fromCameraInfo(l_info_msg, r_info_msg);
@@ -207,24 +207,16 @@ void LibSGMDisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const Cam
 void LibSGMDisparityNodelet::configCb(Config& config, uint32_t level)
 {
   // Tweak all settings to be valid
-  config.prefilter_size |= 0x1;                                 // must be odd
-  config.correlation_window_size |= 0x1;                        // must be odd
   config.disparity_range = (config.disparity_range / 16) * 16;  // must be multiple of 16
 
   // check stereo method
   // Note: With single-threaded NodeHandle, configCb and imageCb can't be called
   // concurrently, so this is thread-safe.
-  // block_matcher_.setPreFilterCap(config.prefilter_cap);
-  block_matcher_.setCorrelationWindowSize(config.correlation_window_size);
   block_matcher_.setMinDisparity(config.min_disparity);
   block_matcher_.setDisparityRange(config.disparity_range);
   block_matcher_.setUniquenessRatio(config.uniqueness_ratio);
-  // block_matcher_.setSpeckleSize(config.speckle_size);
-  // block_matcher_.setSpeckleRange(config.speckle_range);
-  // block_matcher_.setSgbmMode(config.fullDP);
   block_matcher_.setP1(config.P1);
   block_matcher_.setP2(config.P2);
-  block_matcher_.setDisp12MaxDiff(config.disp12MaxDiff);
 
   block_matcher_.applyConfig();
 }
