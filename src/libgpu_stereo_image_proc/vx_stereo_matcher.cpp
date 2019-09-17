@@ -191,9 +191,9 @@ VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, 
   }
   else
   {
-    vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_image_, right_image_, disparity_, min_disparity, max_disparity, P1, P2, sad_win_size, ct_win_size,
-        hc_win_size, clip, max_diff, uniqueness_ratio, NVX_SCANLINE_ALL, NVX_SGM_PYRAMIDAL_STEREO);
+    vx_node sgm_node = nvxSemiGlobalMatchingNode(graph_, left_image_, right_image_, disparity_, min_disparity,
+                                                 max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip,
+                                                 max_diff, uniqueness_ratio, scanline_mask, flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
     vxReleaseNode(&sgm_node);
   }
