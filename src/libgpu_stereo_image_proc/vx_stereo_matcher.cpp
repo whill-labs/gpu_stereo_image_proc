@@ -32,6 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 #include <ros/ros.h>
+#include <iostream>
 
 #include "gpu_stereo_image_proc/vx_stereo_matcher.h"
 
@@ -45,6 +46,9 @@
     }                                                                                                                  \
     ROS_ASSERT(status == VX_SUCCESS);                                                                                  \
   } while(false)
+
+using std::cout;
+using std::endl;
 
 namespace
 {
@@ -191,6 +195,7 @@ VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, 
   }
   else
   {
+    ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, clip %d, max_diff %d, UR %d, Scantype %02X, Flags %02X", min_disparity, max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip, max_diff, uniqueness_ratio, scanline_mask, flags);
     vx_node sgm_node = nvxSemiGlobalMatchingNode(graph_, left_image_, right_image_, disparity_, min_disparity,
                                                  max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip,
                                                  max_diff, uniqueness_ratio, scanline_mask, flags);
