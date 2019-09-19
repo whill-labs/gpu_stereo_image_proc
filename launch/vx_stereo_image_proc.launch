@@ -26,15 +26,19 @@
 
   <!-- Disparity image -->
   <node pkg="nodelet" type="nodelet" name="disparity"
-        args="load gpu_stereo_image_proc/vx_disparity $(arg manager) $(arg bond)"
+        args="standalone gpu_stereo_image_proc/vx_disparity $(arg manager) $(arg bond)"
 	respawn="$(arg respawn)" >
     <param name="approximate_sync" value="$(arg approximate_sync)" />
   </node>
 
   <!-- PointCloud2 -->
   <node pkg="nodelet" type="nodelet" name="point_cloud2"
-        args="load stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
+        args="standalone stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
 	respawn="$(arg respawn)" >
     <param name="approximate_sync" value="$(arg approximate_sync)" />
   </node>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map_to_tmp" args="0 0 0 0 1.57079632679 0 map tmp" ns="stereo" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tmp_to_cameraLeft" args="0 0 0 -1.57079632679 0 0 tmp cameraLeft" ns="stereo" />
+  
 </launch>

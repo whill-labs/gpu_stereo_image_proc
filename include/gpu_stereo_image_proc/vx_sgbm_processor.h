@@ -63,6 +63,8 @@ public:
     ROS_INFO("Win Size    : SAD %d, CT %d, HC %d", sad_win_size_, ct_win_size_, hc_win_size_);
     ROS_INFO("Clip        : %d", clip_);
     ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity_, max_disparity_);
+    ROS_INFO("ScanType    : %02X", scanline_mask_);
+    ROS_INFO("Flags       : %02X", flags_);
     ROS_INFO("===================================");
     stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shrink_scale_, min_disparity_,
                                               max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_,
@@ -98,7 +100,7 @@ public:
     ROS_INFO("%s, in %d", __func__, max_d);
     if(max_d < getMinDisparity())
       return false;
-    max_disparity_ = max_d + 1;
+    max_disparity_ = max_d;
     ROS_INFO("%s, set %d", __func__, max_disparity_);
     return true;
   }
