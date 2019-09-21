@@ -73,15 +73,13 @@ public:
 
   float getUniquenessRatio() const
   {
-    return static_cast<float>(uniqueness_ratio_) * 0.01;
+    return static_cast<float>(uniqueness_ratio_);
   }
   bool setUniquenessRatio(float ratio)
   {
-    ROS_INFO("%s, in %f", __func__, ratio);
-    if(ratio < 0.0 || ratio > 1.0)
+    if(ratio < 0.0 || ratio > 100.0)
       return false;
-    uniqueness_ratio_ = static_cast<int>(ratio * 100.0);
-    ROS_INFO("%s, set %d", __func__, uniqueness_ratio_);
+    uniqueness_ratio_ = static_cast<int>(ratio);
     return true;
   }
 

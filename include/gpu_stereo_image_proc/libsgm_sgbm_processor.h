@@ -64,14 +64,14 @@ public:
 
   float getUniquenessRatio() const
   {
-    return uniqueness_ratio_;
+    return (100.0 - uniqueness_ratio_) * 100.0;
   }
 
   bool setUniquenessRatio(float ratio)
   {
-    if(ratio < 0.0 || ratio > 1.0)
+    if(ratio < 0.0 || ratio > 100.0)
       return false;
-    uniqueness_ratio_ = ratio;
+    uniqueness_ratio_ = (100.0 - ratio) / 100.0;
     return true;
   }
 
