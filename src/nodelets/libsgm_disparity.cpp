@@ -217,6 +217,7 @@ void LibSGMDisparityNodelet::configCb(Config& config, uint32_t level)
   block_matcher_.setUniquenessRatio(config.uniqueness_ratio);
   block_matcher_.setP1(config.P1);
   block_matcher_.setP2(config.P2);
+  block_matcher_.setPathType(config.path_type);
 
   block_matcher_.applyConfig();
 }

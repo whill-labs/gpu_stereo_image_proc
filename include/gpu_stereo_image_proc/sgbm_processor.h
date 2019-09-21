@@ -74,7 +74,7 @@ public:
     ALL        = LEFT_ALL | RIGHT_ALL | STEREO_ALL
   };
 
-  StereoSGBMProcessor() : image_size_(640, 480), min_disparity_(0), max_disparity_(128), P1_(8), P2_(109)
+  StereoSGBMProcessor() : image_size_(640, 480), min_disparity_(0), max_disparity_(128), disparity_range_(64), P1_(200), P2_(400)
   {
   }
 
@@ -134,6 +134,7 @@ protected:
   cv::Size image_size_;
   int      min_disparity_;
   int      max_disparity_;
+  int      disparity_range_;
   int      P1_;
   int      P2_;
 };
@@ -174,6 +175,7 @@ inline bool StereoSGBMProcessor::setDisparityRange(int range)
   ROS_INFO("%s, in %d", __func__, range);
   if(range < 0)
     return false;
+  disparity_range_ = range;
   return StereoSGBMProcessor::setMaxDisparity(min_disparity_ + range);
 }
 inline StereoSGBMProcessor::ImageProcFlag operator|(StereoSGBMProcessor::ImageProcFlag lhs,

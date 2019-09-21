@@ -44,7 +44,7 @@ class LibSGMStereoSGBMProcessor : public StereoSGBMProcessor
 public:
   LibSGMStereoSGBMProcessor()
   {
-    stereo_matcher_.reset(new sgm::LibSGMWrapper(max_disparity_, P1_, P2_, uniqueness_ratio_, true));
+    stereo_matcher_.reset(new sgm::LibSGMWrapper(disparity_range_, P1_, P2_, uniqueness_ratio_, true));
   }
 
   virtual void processDisparity(const cv::Mat& left_rect, const cv::Mat& right_rect,
@@ -53,7 +53,13 @@ public:
 
   void applyConfig()
   {
-    stereo_matcher_.reset(new sgm::LibSGMWrapper(max_disparity_, P1_, P2_, uniqueness_ratio_, true));
+    ROS_INFO("===================================");
+    ROS_INFO("Uniqueness  : %5.1f", uniqueness_ratio_);
+    ROS_INFO("P1/P2       : P1 %d, P2, %d", P1_, P2_);
+    ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity_, max_disparity_);
+    ROS_INFO("Path Type   : %s", (path_type_ == sgm::PathType::SCAN_4PATH ? "SCAN_4PATH" : "SCAN_8PATH" ));
+    ROS_INFO("===================================");
+    stereo_matcher_.reset(new sgm::LibSGMWrapper(disparity_range_, P1_, P2_, uniqueness_ratio_, true, path_type_, min_disparity_));
   }
 
   float getUniquenessRatio() const
@@ -80,20 +86,59 @@ public:
     max_disparity_ = max_d;
     return true;
   }
+
   int getCorrelationWindowSize() const
   {
     // Census window size is fixed to 9x7 in libSGM.
     // See https://github.com/fixstars/libSGM/issues/6
     return 9;
   }
+
   void setCorrelationWindowSize(int sad_win_size)
   {
   }
+
+  int getPathType() const
+  {
+    switch(path_type_)
+    {
+      case sgm::PathType::SCAN_4PATH:
+        return 0;
+        break;
+      case sgm::PathType::SCAN_8PATH:
+        return 1;
+        break;
+      default:
+        return -1;
+        break;
+    }
+  }
+
+  bool setPathType(int path_type)
+  {
+    bool ret = true;
+    switch(path_type)
+    {
+      case 0:
+        path_type_ = sgm::PathType::SCAN_4PATH;
+        break;
+      case 1:
+        path_type_ = sgm::PathType::SCAN_8PATH;
+        break;
+      default:
+        ret = false;
+        break;
+    }
+    return ret;
+  }
+
+
 
 private:
   std::shared_ptr<sgm::LibSGMWrapper> stereo_matcher_;
 
   float uniqueness_ratio_;
+  sgm::PathType path_type_;
 };
 
 }  // namespace gpu_stereo_image_proc
