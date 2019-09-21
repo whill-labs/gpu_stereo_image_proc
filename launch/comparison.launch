@@ -1,0 +1,81 @@
+<!-- Launch in the camera namespace containing "image_raw" and "camera_info" -->
+<launch>
+
+  <arg name="manager" /> <!-- Must be globally qualified -->
+  <arg name="respawn" default="false" />
+  <arg name="left" default="left" />
+  <arg name="right" default="right" />
+  <arg name="approximate_sync" default="false" />
+
+  <arg     if="$(arg respawn)" name="bond" value="" />
+  <arg unless="$(arg respawn)" name="bond" value="--no-bond" />
+
+  <!-- Basic processing for left camera -->
+  <include file="$(find image_proc)/launch/image_proc.launch"
+	   ns="$(arg left)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="respawn" value="$(arg respawn)" />
+  </include>
+
+  <!-- Basic processing for right camera -->
+  <include file="$(find image_proc)/launch/image_proc.launch"
+	   ns="$(arg right)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="respawn" value="$(arg respawn)" />
+  </include>
+
+<!-- ============================= libsgm ================================ -->
+  <!-- Disparity image -->
+  <node pkg="nodelet" type="nodelet" name="libsgm_disparity"
+        args="load gpu_stereo_image_proc/libsgm_disparity $(arg manager) $(arg bond)"
+	respawn="$(arg respawn)" >
+    <param name="approximate_sync" value="$(arg approximate_sync)" />
+    <remap from="disparity" to="libsgm_disparity" />
+  </node>
+
+  <!-- PointCloud2 -->
+  <node pkg="nodelet" type="nodelet" name="libsgm_point_cloud2"
+        args="load stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
+	respawn="$(arg respawn)" >
+    <param name="approximate_sync" value="$(arg approximate_sync)" />
+    <remap from="disparity" to="libsgm_disparity" />
+    <remap from="points2" to="libsgm_points2" />
+  </node>
+  
+<!-- ============================= VisionWorks ================================ -->
+  <!-- Disparity image -->
+  <node pkg="nodelet" type="nodelet" name="vx_disparity"
+        args="load gpu_stereo_image_proc/vx_disparity $(arg manager) $(arg bond)"
+	respawn="$(arg respawn)" >
+    <param name="approximate_sync" value="$(arg approximate_sync)" />
+    <remap from="disparity" to="vx_disparity" />
+  </node>
+
+  <!-- PointCloud2 -->
+  <node pkg="nodelet" type="nodelet" name="vx_point_cloud2"
+        args="load stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
+	respawn="$(arg respawn)" >
+    <param name="approximate_sync" value="$(arg approximate_sync)" />
+    <remap from="disparity" to="vx_disparity" />
+    <remap from="points2" to="vx_points2" />
+  </node>
+
+<!-- ============================= CPU ================================ -->
+  <!-- Disparity image -->
+  <node pkg="nodelet" type="nodelet" name="disparity"
+        args="load stereo_image_proc/disparity $(arg manager) $(arg bond)"
+	respawn="$(arg respawn)" >
+    <param name="approximate_sync" value="$(arg approximate_sync)" />
+  </node>
+
+  <!-- PointCloud2 -->
+  <node pkg="nodelet" type="nodelet" name="point_cloud2"
+        args="load stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
+	respawn="$(arg respawn)" >
+    <param name="approximate_sync" value="$(arg approximate_sync)" />
+  </node>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map_to_tmp" args="0 0 0 0 1.57079632679 0 map tmp" ns="stereo" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tmp_to_cameraLeft" args="0 0 0 -1.57079632679 0 0 tmp cameraLeft" ns="stereo" />
+  
+</launch>
