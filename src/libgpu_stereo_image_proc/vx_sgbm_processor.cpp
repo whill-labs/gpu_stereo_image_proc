@@ -43,7 +43,7 @@ void VXStereoSGBMProcessor::processDisparity(const cv::Mat& left_rect, const cv:
 {
   // Fixed-point disparity is 16 times the true value: d = d_fp / 16.0 = x_l - x_r.
   static const int    DPP     = 16;  // disparities per pixel
-  static const double inv_dpp = 1.0 / DPP;
+  static const double inv_dpp = static_cast<double>(shrink_scale_) / DPP;
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
   stereo_matcher_->compute(left_rect, right_rect, disparity16_);
