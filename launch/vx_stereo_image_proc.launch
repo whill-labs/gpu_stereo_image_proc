@@ -26,14 +26,14 @@
 
   <!-- Disparity image -->
   <node pkg="nodelet" type="nodelet" name="disparity"
-        args="standalone gpu_stereo_image_proc/vx_disparity $(arg manager) $(arg bond)"
+        args="load gpu_stereo_image_proc/vx_disparity $(arg manager) $(arg bond)"
 	respawn="$(arg respawn)" >
     <param name="approximate_sync" value="$(arg approximate_sync)" />
   </node>
 
   <!-- PointCloud2 -->
   <node pkg="nodelet" type="nodelet" name="point_cloud2"
-        args="standalone stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
+        args="load stereo_image_proc/point_cloud2 $(arg manager) $(arg bond)"
 	respawn="$(arg respawn)" >
     <param name="approximate_sync" value="$(arg approximate_sync)" />
   </node>
