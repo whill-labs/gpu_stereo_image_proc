@@ -1,11 +1,11 @@
 <package>
   <name>gpu_stereo_image_proc</name>
-  <version>0.0.0</version>
-  <description>Stereo and single image rectification and disparity processing.</description>
+  <version>1.0.0</version>
+  <description>Stereo disparity processing by using NVIDIA VisionWorks and Fixstars libSGM.</description>
   <author>Seiya Shimizu</author>
   <maintainer email="shimizu@whill.jp">Seiya Shimizu</maintainer>
   <license>BSD</license>
-  <url>http://www.ros.org/wiki/gpu_stereo_image_proc</url>
+  <url>https://github.com/WHILL/gpu_stereo_image_proc</url>
 
   <export>
     <rosdoc config="rosdoc.yaml" />
