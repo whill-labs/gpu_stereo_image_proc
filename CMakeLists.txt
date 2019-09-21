@@ -27,6 +27,17 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 find_package(VisionWorks REQUIRED)
 include_directories(${VisionWorks_INCLUDE_DIRS})
 
+find_package(CUDA REQUIRED)
+#set(CUDA_ARCH "-arch=sm_50" CACHE STRING "Value of the NVCC -arch option.")
+#if(${CMAKE_VERSION} VERSION_EQUAL 3.7 OR ${CMAKE_VERSION} VERSION_GREATER 3.7)
+#  option(AUTO_DETECT_ARCH "Detect local GPU compute arch automatically" ON)
+#endif()
+#
+#if(DEFINED AUTO_DETECT_ARCH AND "${AUTO_DETECT_ARCH}")
+#	CUDA_SELECT_NVCC_ARCH_FLAGS(ARCH_FLAGS "Auto")
+#	set(CUDA_ARCH "${ARCH_FLAGS}" CACHE STRING "Value of the NVCC -arch option." FORCE)
+#endif()
+
 include(ExternalProject)
 ExternalProject_Add(
     ext-libSGM
@@ -36,8 +47,8 @@ ExternalProject_Add(
     SOURCE_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/libSGM"
     CMAKE_ARGS  "-DBUILD_OPENCV_WRAPPER=ON"
                 "-DLIBSGM_SHARED=ON"
-                "-DCUDA_ARCH=${CUDA_ARCH}"
-                "-DAUTO_DETECT_ARCH=${AUTO_DETECT_ARCH}"
+#                "-DCUDA_ARCH=${CUDA_ARCH}"
+#                "-DAUTO_DETECT_ARCH=${AUTO_DETECT_ARCH}"
                 "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/libSGM"
     BUILD_ALWAYS ON
 )
