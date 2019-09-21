@@ -85,21 +85,17 @@ public:
 
   bool setMinDisparity(int min_d)
   {
-    ROS_INFO("%s, in %d", __func__, min_d);
     if(min_d > getMaxDisparity())
       return false;
     min_disparity_ = min_d;
-    ROS_INFO("%s, set %d", __func__, min_disparity_);
     return true;
   }
 
   bool setMaxDisparity(int max_d)
   {
-    ROS_INFO("%s, in %d", __func__, max_d);
     if(max_d < getMinDisparity())
       return false;
     max_disparity_ = max_d;
-    ROS_INFO("%s, set %d", __func__, max_disparity_);
     return true;
   }
 
@@ -109,7 +105,6 @@ public:
   }
   void setDisp12MaxDiff(int max_diff)
   {
-    ROS_INFO("%s, in %d", __func__, max_diff);
     max_diff_ = max_diff;
   }
 
@@ -119,7 +114,6 @@ public:
   }
   void setCorrelationWindowSize(int sad_win_size)
   {
-    ROS_INFO("%s, in %d", __func__, sad_win_size);
     sad_win_size_ = sad_win_size;
   }
 
@@ -129,7 +123,6 @@ public:
   }
   void setHcWinSize(int hc_win_size)
   {
-    ROS_INFO("%s, in %d", __func__, hc_win_size);
     hc_win_size_ = hc_win_size;
   }
 
@@ -139,7 +132,6 @@ public:
   }
   void setCtWinSize(int ct_win_size)
   {
-    ROS_INFO("%s, in %d", __func__, ct_win_size);
     ct_win_size_ = ct_win_size;
   }
 
@@ -149,7 +141,6 @@ public:
   }
   void setClip(int clip)
   {
-    ROS_INFO("%s, in %d", __func__, clip);
     clip_ = clip;
   }
 
@@ -159,7 +150,6 @@ public:
   }
   void setShrinkScale(int shrink_scale)
   {
-    ROS_INFO("%s, in %d", __func__, shrink_scale);
     shrink_scale_ = shrink_scale;
   }
 
