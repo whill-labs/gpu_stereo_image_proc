@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 project(gpu_stereo_image_proc)
 
 find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_proc image_transport message_filters nodelet sensor_msgs stereo_msgs)
@@ -22,7 +22,7 @@ catkin_package(
 
 include_directories(include)
 
-find_package(OpenCV REQUIRED) 
+find_package(OpenCV 3.2 REQUIRED) 
 include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 find_package(VisionWorks REQUIRED)
 include_directories(${VisionWorks_INCLUDE_DIRS})
