@@ -37,6 +37,18 @@ catkin_make -DAUTO_DETECT_ARCH=OFF -DCUDA_ARCH="<your-selection>"
 
 Basic usage of this package (e.g. subscribed/published topics, node structure) is compatible with [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc). Refer to its [wiki](http://wiki.ros.org/stereo_image_proc?distro=melodic) for quick start.
 
+### Nodelets
+
+This package contains nodelets for creating disparity images from stereo.
+
+#### gpu_stereo_image_proc/libsgm_disparity
+
+Nodelet which wraps Fixstars libSGM.
+
+#### gpu_stereo_image_proc/vx_disparity
+
+Nodelet which wraps NVIDIA VisionWorks.
+
 ### Parameters
 
 Most of the parameters can be configured via [dynamic reconfigure](http://wiki.ros.org/dynamic_reconfigure). These wiki pages describes configurable parameters.
@@ -58,6 +70,7 @@ Note: `disparity` and `points2` topics are remapped with `libsgm_` prefix (libSG
 
 ## Licenses
 
+- Thi package is distributed under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 - The underlying code of this package is forked from [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc) which is distibuted under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 - This package includes [libSGM](https://github.com/fixstars/libSGM) which is distributed under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 - This package depends on [VisionWorks](https://developer.nvidia.com/embedded/visionworks) which NVIDIA reserves all the copyrights of.
