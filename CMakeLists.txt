@@ -10,7 +10,6 @@ endif()
 
 # Dynamic reconfigure support
 generate_dynamic_reconfigure_options(
-  cfg/Disparity.cfg
   cfg/VXSGBM.cfg
   cfg/LIBSGM.cfg)
 
