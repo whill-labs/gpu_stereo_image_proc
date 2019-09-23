@@ -70,7 +70,7 @@ Note: `disparity` and `points2` topics are remapped with `libsgm_` prefix (libSG
 
 ## Licenses
 
-- Thi package is distributed under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
+- This package is distributed under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 - The underlying code of this package is forked from [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc) which is distibuted under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 - This package includes [libSGM](https://github.com/fixstars/libSGM) which is distributed under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 - This package depends on [VisionWorks](https://developer.nvidia.com/embedded/visionworks) which NVIDIA reserves all the copyrights of.
