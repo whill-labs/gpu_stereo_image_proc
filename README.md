@@ -68,6 +68,10 @@ roslaunch gpu_stereo_image_proc comparison.launch manager:=<nodename-of-your-man
 
 Note: `disparity` and `points2` topics are remapped with `libsgm_` prefix (libSGM) and `vx_` prefix (VisionWorks).
 
+### Demo Video
+
+See https://youtu.be/whCAjrDg9_A
+
 ## Licenses
 
 - This package is distributed under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
