@@ -63,6 +63,9 @@ This package provides an example launch file which enables you to see difference
 ```sh
 # Launch your stereo camera
 # Launch your nodelet manager
+rosrun nodelet nodelet manager __name:=<nodename-of-your-manager> __ns:=<namespace-of-your-camera>
+
+# Launch image processing nodelets
 roslaunch gpu_stereo_image_proc comparison.launch manager:=<nodename-of-your-manager> __ns:=<namespace-of-your-camera>
 ```
 
