@@ -94,7 +94,9 @@ class VXDisparityNodelet : public nodelet::Nodelet
 
   void connectCb();
 
-  void imageCb(const ImageConstPtr& l_image_msg, const CameraInfoConstPtr& l_info_msg, const ImageConstPtr& r_image_msg,
+  void imageCb(const ImageConstPtr&      l_image_msg,
+               const CameraInfoConstPtr& l_info_msg,
+               const ImageConstPtr&      r_image_msg,
                const CameraInfoConstPtr& r_info_msg);
 
   void configCb(Config& config, uint32_t level);
@@ -161,8 +163,10 @@ void VXDisparityNodelet::connectCb()
   }
 }
 
-void VXDisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraInfoConstPtr& l_info_msg,
-                                 const ImageConstPtr& r_image_msg, const CameraInfoConstPtr& r_info_msg)
+void VXDisparityNodelet::imageCb(const ImageConstPtr&      l_image_msg,
+                                 const CameraInfoConstPtr& l_info_msg,
+                                 const ImageConstPtr&      r_image_msg,
+                                 const CameraInfoConstPtr& r_info_msg)
 {
   // Update the camera model
   model_.fromCameraInfo(l_info_msg, r_info_msg);
@@ -188,6 +192,13 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr& l_image_msg, const CameraI
   // Create cv::Mat views onto all buffers
   const cv::Mat_<uint8_t> l_image = cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::MONO8)->image;
   const cv::Mat_<uint8_t> r_image = cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)->image;
+
+  const cv::Size image_size = block_matcher_.getImageSize();
+  if(image_size.width != l_image.cols || image_size.height != l_image.rows)
+  {
+    block_matcher_.setImageSize(cv::Size(l_image.cols, l_image.rows));
+    block_matcher_.applyConfig();
+  }
 
   // Perform block matching to find the disparities
   block_matcher_.processDisparity(l_image, r_image, model_, *disp_msg);

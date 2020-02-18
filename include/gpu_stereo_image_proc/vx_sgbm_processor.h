@@ -48,7 +48,8 @@ public:
     stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height));
   }
 
-  virtual void processDisparity(const cv::Mat& left_rect, const cv::Mat& right_rect,
+  virtual void processDisparity(const cv::Mat&                           left_rect,
+                                const cv::Mat&                           right_rect,
                                 const image_geometry::StereoCameraModel& model,
                                 stereo_msgs::DisparityImage&             disparity) const;
 
@@ -69,6 +70,17 @@ public:
     stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shrink_scale_, min_disparity_,
                                               max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_,
                                               clip_, max_diff_, uniqueness_ratio_, scanline_mask_, flags_));
+  }
+
+  bool setImageSize(cv::Size image_size)
+  {
+    if(image_size.width % 4 != 0)
+    {
+      ROS_WARN("Image Width must be divisible by 4.");
+      return false;
+    }
+    image_size_ = image_size;
+    return true;
   }
 
   float getUniquenessRatio() const

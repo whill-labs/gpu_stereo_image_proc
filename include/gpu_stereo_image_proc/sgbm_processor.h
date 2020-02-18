@@ -74,11 +74,18 @@ public:
     ALL        = LEFT_ALL | RIGHT_ALL | STEREO_ALL
   };
 
-  StereoSGBMProcessor() : image_size_(640, 480), min_disparity_(0), max_disparity_(128), disparity_range_(64), P1_(200), P2_(400)
+  StereoSGBMProcessor()
+    : image_size_(640, 480), min_disparity_(0), max_disparity_(128), disparity_range_(64), P1_(200), P2_(400)
   {
   }
 
   virtual ~StereoSGBMProcessor(){};
+
+  cv::Size getImageSize() const
+  {
+    return image_size_;
+  }
+  virtual bool setImageSize(cv::Size image_size);
 
   int  getInterpolation() const;
   void setInterpolation(int interp);
@@ -95,15 +102,17 @@ public:
   int  getDisparityRange() const;
   bool setDisparityRange(int range);
 
-  int  getP1() const
-  {return P1_;}
+  int getP1() const
+  {
+    return P1_;
+  }
   void setP1(int P1)
   {
     ROS_INFO("%s, in %d", __func__, P1);
     P1_ = P1;
   }
 
-  int  getP2() const
+  int getP2() const
   {
     return P2_;
   }
@@ -113,18 +122,28 @@ public:
     P2_ = P2;
   }
 
-  bool process(const sensor_msgs::ImageConstPtr& left_raw, const sensor_msgs::ImageConstPtr& right_raw,
-               const image_geometry::StereoCameraModel& model, StereoImageSet& output, ImageProcFlag flags) const;
+  bool process(const sensor_msgs::ImageConstPtr&        left_raw,
+               const sensor_msgs::ImageConstPtr&        right_raw,
+               const image_geometry::StereoCameraModel& model,
+               StereoImageSet&                          output,
+               ImageProcFlag                            flags) const;
 
-  virtual void processDisparity(const cv::Mat& left_rect, const cv::Mat& right_rect,
+  virtual void processDisparity(const cv::Mat&                           left_rect,
+                                const cv::Mat&                           right_rect,
                                 const image_geometry::StereoCameraModel& model,
                                 stereo_msgs::DisparityImage&             disparity) const;
 
-  void processPoints(const stereo_msgs::DisparityImage& disparity, const cv::Mat& color, const std::string& encoding,
-                     const image_geometry::StereoCameraModel& model, sensor_msgs::PointCloud& points) const;
+  void processPoints(const stereo_msgs::DisparityImage&       disparity,
+                     const cv::Mat&                           color,
+                     const std::string&                       encoding,
+                     const image_geometry::StereoCameraModel& model,
+                     sensor_msgs::PointCloud&                 points) const;
 
-  void processPoints2(const stereo_msgs::DisparityImage& disparity, const cv::Mat& coloer, const std::string& encoding,
-                      const image_geometry::StereoCameraModel& model, sensor_msgs::PointCloud2& points) const;
+  void processPoints2(const stereo_msgs::DisparityImage&       disparity,
+                      const cv::Mat&                           coloer,
+                      const std::string&                       encoding,
+                      const image_geometry::StereoCameraModel& model,
+                      sensor_msgs::PointCloud2&                points) const;
 
 protected:
   image_proc::Processor       mono_processor_;
