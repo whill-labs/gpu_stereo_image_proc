@@ -63,10 +63,10 @@ This package provides an example launch file which enables you to see difference
 ```sh
 # Launch your stereo camera
 # Launch your nodelet manager
-rosrun nodelet nodelet manager __name:=<nodename-of-your-manager> __ns:=<namespace-of-your-camera>
+rosrun nodelet nodelet manager __name:=manager # Note that manager must be located in global namespace
 
 # Launch image processing nodelets
-roslaunch gpu_stereo_image_proc comparison.launch manager:=<nodename-of-your-manager> __ns:=<namespace-of-your-camera>
+roslaunch gpu_stereo_image_proc comparison.launch manager:=/manager __ns:=<namespace-of-your-camera> # Don't forget '/' before manager's name.
 ```
 
 Note: `disparity` and `points2` topics are remapped with `libsgm_` prefix (libSGM) and `vx_` prefix (VisionWorks).
