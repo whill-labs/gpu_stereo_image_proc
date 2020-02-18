@@ -85,7 +85,7 @@ public:
   {
     return image_size_;
   }
-  virtual bool setImageSize(cv::Size image_size);
+  virtual bool setImageSize(cv::Size image_size) = 0;
 
   int  getInterpolation() const;
   void setInterpolation(int interp);
