@@ -137,10 +137,20 @@ VXStereoMatcher::VXStereoMatcher()
 {
 }
 
-VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, const int shrink_scale,
-                                 const int min_disparity, const int max_disparity, const int P1, const int P2,
-                                 const int sad_win_size, const int ct_win_size, const int hc_win_size, const int clip,
-                                 const int max_diff, const int uniqueness_ratio, const int scanline_mask,
+VXStereoMatcher::VXStereoMatcher(const int image_width,
+                                 const int image_height,
+                                 const int shrink_scale,
+                                 const int min_disparity,
+                                 const int max_disparity,
+                                 const int P1,
+                                 const int P2,
+                                 const int sad_win_size,
+                                 const int ct_win_size,
+                                 const int hc_win_size,
+                                 const int clip,
+                                 const int max_diff,
+                                 const int uniqueness_ratio,
+                                 const int scanline_mask,
                                  const int flags)
   : context_(nullptr)
   , graph_(nullptr)
@@ -195,7 +205,10 @@ VXStereoMatcher::VXStereoMatcher(const int image_width, const int image_height, 
   }
   else
   {
-    ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, clip %d, max_diff %d, UR %d, Scantype %02X, Flags %02X", min_disparity, max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip, max_diff, uniqueness_ratio, scanline_mask, flags);
+    ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, clip %d, max_diff %d, UR %d, Scantype "
+             "%02X, Flags %02X",
+             min_disparity, max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip, max_diff,
+             uniqueness_ratio, scanline_mask, flags);
     vx_node sgm_node = nvxSemiGlobalMatchingNode(graph_, left_image_, right_image_, disparity_, min_disparity,
                                                  max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip,
                                                  max_diff, uniqueness_ratio, scanline_mask, flags);
