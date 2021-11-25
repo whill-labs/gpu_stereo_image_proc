@@ -1,0 +1,93 @@
+# This is a configuration file to customize code analysis by Sider.
+#
+# For more information, see the documentation:
+# https://help.sider.review/getting-started/custom-configuration
+
+# Customize each tool. If analyses fail, try adjusting each option referencing the following example.
+linter:
+
+#   # Clang-Tidy example. See https://help.sider.review/tools/cplusplus/clang-tidy
+#   clang_tidy:
+#     root_dir: project/
+#     dependencies:
+#       - libgdbm-dev
+#       - libfastjson-dev=0.99.8-2
+#     include-path:
+#       - myinclude
+#       - foo/include
+#       - /usr/include/libfastjson
+
+#   # Cppcheck example. See https://help.sider.review/tools/cplusplus/cppcheck
+#   cppcheck:
+#     root_dir: project/
+#     include-path:
+#       - include/
+#     target: src/
+#     ignore: vendor/
+#     enable: all
+#     std: c99
+#     project: my_project.sln
+#     language: c++
+#     addon: [cert, misra]
+#     bug-hunting: true
+#     parallel: false
+#     suppressions-list: suppressions.txt
+
+#   # cpplint example. See https://help.sider.review/tools/cplusplus/cpplint
+#   cpplint:
+#     root_dir: project/
+#     target: [src/, lib/]
+#     extensions: c,cc
+#     headers: hpp,hxx
+#     filter: "-whitespace,+whitespace/braces"
+#     linelength: 100
+#     exclude:
+#       - src/*.cpp
+#       - lib/*.cpp
+
+#   # Flake8 example. See https://help.sider.review/tools/python/flake8
+#   flake8:
+#     root_dir: project/
+#     dependencies:
+#       - flake8-bugbear
+#       - flake8-builtins==1.4.1
+#       - git+https://github.com/PyCQA/flake8-import-order.git@51e16f33065512afa1a85a20b2c2d3be768f78ea
+#       - { name: "flake8-docstrings", version: "==1.6.0" }
+#     target: src/
+#     config: config/.flake8
+#     parallel: false
+
+#   # Misspell example. See https://help.sider.review/tools/others/misspell
+#   misspell:
+#     root_dir: project/
+#     target: [src/, test/]
+#     exclude: ["**/*.min.*"]
+#     locale: UK
+#     ignore: [center, behavior]
+
+#   # ShellCheck example. See https://help.sider.review/tools/shellscript/shellcheck
+#   shellcheck:
+#     root_dir: project/
+#     target:
+#       - "**/*.{sh,bash}"
+#       - shebang: true
+#     include: [SC2104, SC2105]
+#     exclude: [SC1000, SC1118]
+#     enable: all
+#     shell: bash
+#     severity: error
+#     norc: true
+
+# Ignore specific files. Example:
+# ignore:
+#   - "*.pdf"
+#   - "*.mp4"
+#   - "*.min.*"
+#   - "images/**"
+
+# Exclude specific branches. Example:
+# branches:
+#   exclude:
+#     - master
+#     - development
+#     - /^release-.*$/
