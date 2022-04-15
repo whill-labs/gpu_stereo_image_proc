@@ -44,22 +44,22 @@ void loadMonocularNodelets(nodelet::Loader& manager, const std::string& side, co
   // Otherwise the internal remapping 'image_raw' -> 'left/image_raw' can hide a
   // global remapping from the launch file or command line.
   std::string image_raw_topic        = ros::names::resolve(side + "/image_raw");
-  std::string image_mono_topic       = ros::names::resolve(side + "/image_mono");
-  std::string image_color_topic      = ros::names::resolve(side + "/image_color");
+  //std::string image_mono_topic       = ros::names::resolve(side + "/image_mono");
+  //std::string image_color_topic      = ros::names::resolve(side + "/image_color");
   std::string image_rect_topic       = ros::names::resolve(side + "/image_rect");
-  std::string image_rect_color_topic = ros::names::resolve(side + "/image_rect_color");
+  //std::string image_rect_color_topic = ros::names::resolve(side + "/image_rect_color");
   std::string camera_info_topic      = ros::names::resolve(side + "/camera_info");
 
   // Debayer nodelet: image_raw -> image_mono, image_color
-  remappings["image_raw"]   = image_raw_topic;
-  remappings["image_mono"]  = image_mono_topic;
-  remappings["image_color"] = image_color_topic;
-  std::string debayer_name  = ros::this_node::getName() + "_debayer_" + side;
-  manager.load(debayer_name, "image_proc/debayer", remappings, my_argv);
+  // remappings["image_raw"]   = image_raw_topic;
+  // remappings["image_mono"]  = image_mono_topic;
+  // remappings["image_color"] = image_color_topic;
+  // std::string debayer_name  = ros::this_node::getName() + "_debayer_" + side;
+  // manager.load(debayer_name, "image_proc/debayer", remappings, my_argv);
 
   // Rectify nodelet: image_mono -> image_rect
   remappings.clear();
-  remappings["image_mono"]      = image_mono_topic;
+  remappings["image_mono"]      = image_raw_topic;
   remappings["camera_info"]     = camera_info_topic;
   remappings["image_rect"]      = image_rect_topic;
   std::string rectify_mono_name = ros::this_node::getName() + "_rectify_mono_" + side;
@@ -68,14 +68,14 @@ void loadMonocularNodelets(nodelet::Loader& manager, const std::string& side, co
   manager.load(rectify_mono_name, "image_proc/rectify", remappings, my_argv);
 
   // Rectify nodelet: image_color -> image_rect_color
-  remappings.clear();
-  remappings["image_mono"]       = image_color_topic;
-  remappings["camera_info"]      = camera_info_topic;
-  remappings["image_rect"]       = image_rect_color_topic;
-  std::string rectify_color_name = ros::this_node::getName() + "_rectify_color_" + side;
-  if(rectify_params.valid())
-    ros::param::set(rectify_color_name, rectify_params);
-  manager.load(rectify_color_name, "image_proc/rectify", remappings, my_argv);
+  // remappings.clear();
+  // remappings["image_mono"]       = image_color_topic;
+  // remappings["camera_info"]      = camera_info_topic;
+  // remappings["image_rect"]       = image_rect_color_topic;
+  // std::string rectify_color_name = ros::this_node::getName() + "_rectify_color_" + side;
+  // if(rectify_params.valid())
+  //   ros::param::set(rectify_color_name, rectify_params);
+  // manager.load(rectify_color_name, "image_proc/rectify", remappings, my_argv);
 }
 
 int main(int argc, char** argv)
@@ -131,6 +131,10 @@ int main(int argc, char** argv)
   std::string point_cloud2_name = ros::this_node::getName() + "_point_cloud2";
   if(shared_params.valid())
     ros::param::set(point_cloud2_name, shared_params);
+  remappings.clear();
+
+  // Map mono image_rect to image_rect_color as that's what point_cloud2 requires
+  remappings["left/image_rect_color"]      = ros::names::resolve("left/image_rect");;
   manager.load(point_cloud2_name, "stereo_image_proc/point_cloud2", remappings, my_argv);
 
   // Check for only the original camera topics
