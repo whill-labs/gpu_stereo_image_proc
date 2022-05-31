@@ -5,7 +5,11 @@ find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_
 find_package(Boost REQUIRED COMPONENTS thread)
 
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
-  add_compile_options(-std=c++14 )
+  #add_compile_options(-std=c++14 )
+
+  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
 # Dynamic reconfigure support
@@ -21,13 +25,13 @@ catkin_package(
 
 include_directories(include)
 
-find_package(OpenCV 3.2 REQUIRED) 
+find_package(OpenCV 4 REQUIRED) 
 include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 find_package(VisionWorks REQUIRED)
 include_directories(${VisionWorks_INCLUDE_DIRS})
 
 find_package(CUDA REQUIRED)
-set(CUDA_ARCH "-arch=sm_50" CACHE STRING "Value of the NVCC -arch option.")
+set(CUDA_ARCH "-arch=sm_72" CACHE STRING "Value of the NVCC -arch option.")
 if(${CMAKE_VERSION} VERSION_EQUAL 3.7 OR ${CMAKE_VERSION} VERSION_GREATER 3.7)
   option(AUTO_DETECT_ARCH "Detect local GPU compute arch automatically" ON)
 endif()
@@ -41,6 +45,7 @@ include(ExternalProject)
 ExternalProject_Add(
     ext-libSGM
     GIT_REPOSITORY "https://github.com/fixstars/libSGM.git"
+    GIT_TAG     "master"
     PREFIX      "${CMAKE_CURRENT_BINARY_DIR}/ext/libSGM"
     INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/libSGM"
     SOURCE_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/libSGM"
