@@ -33,49 +33,48 @@
  *********************************************************************/
 #ifndef GPU_STEREO_IMAGE_PROC_VX_SGBM_PROCESSOR_H
 #define GPU_STEREO_IMAGE_PROC_VX_SGBM_PROCESSOR_H
-#include <ros/ros.h>
 #include "gpu_stereo_image_proc/sgbm_processor.h"
 #include "gpu_stereo_image_proc/vx_stereo_matcher.h"
+#include <ros/ros.h>
 
-namespace gpu_stereo_image_proc
-{
-class VXStereoSGBMProcessor : public StereoSGBMProcessor
-{
+namespace gpu_stereo_image_proc {
+class VXStereoSGBMProcessor : public StereoSGBMProcessor {
 public:
+  enum DisparityFiltering_t { Filtering_None = 0, Filtering_Bilateral = 1 };
+
   VXStereoSGBMProcessor()
-    : max_diff_(16), hc_win_size_(1), ct_win_size_(0), clip_(31), shrink_scale_(1), uniqueness_ratio_(15)
-  {
-    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height));
+      : max_diff_(16), hc_win_size_(1), ct_win_size_(0), clip_(31),
+        uniqueness_ratio_(15) {
+    stereo_matcher_.reset(
+        new VXStereoMatcher(image_size_.width, image_size_.height));
   }
 
-  virtual void processDisparity(const cv::Mat&                           left_rect,
-                                const cv::Mat&                           right_rect,
-                                const image_geometry::StereoCameraModel& model,
-                                stereo_msgs::DisparityImage&             disparity) const;
+  cv::Mat_<int16_t> processDisparity(
+      const cv::Mat &left_rect, const cv::Mat &right_rect,
+      const image_geometry::StereoCameraModel &model) const override;
 
-  void applyConfig()
-  {
+  void applyConfig() {
     ROS_INFO("===================================");
     ROS_INFO("image_size  : w %d, h %d", image_size_.width, image_size_.height);
     ROS_INFO("shrink_scale: %d", shrink_scale_);
     ROS_INFO("Uniqueness  : %d", uniqueness_ratio_);
     ROS_INFO("Max Diff    : %d", max_diff_);
     ROS_INFO("P1/P2       : P1 %d, P2, %d", P1_, P2_);
-    ROS_INFO("Win Size    : SAD %d, CT %d, HC %d", sad_win_size_, ct_win_size_, hc_win_size_);
+    ROS_INFO("Win Size    : SAD %d, CT %d, HC %d", sad_win_size_, ct_win_size_,
+             hc_win_size_);
     ROS_INFO("Clip        : %d", clip_);
     ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity_, max_disparity_);
     ROS_INFO("ScanType    : %02X", scanline_mask_);
     ROS_INFO("Flags       : %02X", flags_);
     ROS_INFO("===================================");
-    stereo_matcher_.reset(new VXStereoMatcher(image_size_.width, image_size_.height, shrink_scale_, min_disparity_,
-                                              max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_,
-                                              clip_, max_diff_, uniqueness_ratio_, scanline_mask_, flags_));
+    stereo_matcher_.reset(new VXStereoMatcher(
+        image_size_.width, image_size_.height, shrink_scale_, min_disparity_,
+        max_disparity_, P1_, P2_, sad_win_size_, ct_win_size_, hc_win_size_,
+        clip_, max_diff_, uniqueness_ratio_, scanline_mask_, flags_));
   }
 
-  bool setImageSize(cv::Size image_size)
-  {
-    if(image_size.width % 4 != 0)
-    {
+  bool setImageSize(cv::Size image_size) {
+    if (image_size.width % 4 != 0) {
       ROS_WARN("Image Width must be divisible by 4.");
       return false;
     }
@@ -83,96 +82,53 @@ public:
     return true;
   }
 
-  float getUniquenessRatio() const
-  {
+  float getUniquenessRatio() const {
     return static_cast<float>(uniqueness_ratio_);
   }
-  bool setUniquenessRatio(float ratio)
-  {
-    if(ratio < 0.0 || ratio > 100.0)
+  bool setUniquenessRatio(float ratio) {
+    if (ratio < 0.0 || ratio > 100.0)
       return false;
     uniqueness_ratio_ = static_cast<int>(ratio);
     return true;
   }
 
-  bool setMinDisparity(int min_d)
-  {
-    if(min_d > getMaxDisparity())
+  bool setMinDisparity(int min_d) {
+    if (min_d > getMaxDisparity())
       return false;
     min_disparity_ = min_d;
     return true;
   }
 
-  bool setMaxDisparity(int max_d)
-  {
-    if(max_d < getMinDisparity())
+  bool setMaxDisparity(int max_d) {
+    if (max_d < getMinDisparity())
       return false;
     max_disparity_ = max_d;
     return true;
   }
 
-  int getDisp12MaxDiff() const
-  {
-    return max_diff_;
-  }
-  void setDisp12MaxDiff(int max_diff)
-  {
-    max_diff_ = max_diff;
-  }
+  int getDisp12MaxDiff() const { return max_diff_; }
+  void setDisp12MaxDiff(int max_diff) { max_diff_ = max_diff; }
 
-  int getCorrelationWindowSize() const
-  {
-    return sad_win_size_;
-  }
-  void setCorrelationWindowSize(int sad_win_size)
-  {
+  int getCorrelationWindowSize() const { return sad_win_size_; }
+  void setCorrelationWindowSize(int sad_win_size) {
     sad_win_size_ = sad_win_size;
   }
 
-  int getHcWinSize() const
-  {
-    return hc_win_size_;
-  }
-  void setHcWinSize(int hc_win_size)
-  {
-    hc_win_size_ = hc_win_size;
-  }
+  int getHcWinSize() const { return hc_win_size_; }
+  void setHcWinSize(int hc_win_size) { hc_win_size_ = hc_win_size; }
 
-  int getCtWinSize() const
-  {
-    return ct_win_size_;
-  }
-  void setCtWinSize(int ct_win_size)
-  {
-    ct_win_size_ = ct_win_size;
-  }
+  int getCtWinSize() const { return ct_win_size_; }
+  void setCtWinSize(int ct_win_size) { ct_win_size_ = ct_win_size; }
 
-  int getClip() const
-  {
-    return clip_;
-  }
-  void setClip(int clip)
-  {
-    clip_ = clip;
-  }
+  int getClip() const { return clip_; }
+  void setClip(int clip) { clip_ = clip; }
 
-  int getShrinkScale() const
-  {
-    return shrink_scale_;
-  }
-  void setShrinkScale(int shrink_scale)
-  {
-    shrink_scale_ = shrink_scale;
-  }
+  void setFlags(uint8_t flags) { flags_ = flags; }
 
-  void setFlags(uint8_t flags)
-  {
-    flags_ = flags;
-  }
+  void setPathType(uint8_t scanline_mask) { scanline_mask_ = scanline_mask; }
 
-  void setPathType(uint8_t scanline_mask)
-  {
-    scanline_mask_ = scanline_mask;
+  void setDisparityFiltering(DisparityFiltering_t filter) {
+    disparity_filter_ = filter;
   }
 
 private:
@@ -183,12 +139,13 @@ private:
   int hc_win_size_;
   int ct_win_size_;
   int clip_;
-  int shrink_scale_;
   int uniqueness_ratio_;
   int scanline_mask_;
   int flags_;
+
+  DisparityFiltering_t disparity_filter_;
 };
 
-}  // namespace gpu_stereo_image_proc
+} // namespace gpu_stereo_image_proc
 
 #endif

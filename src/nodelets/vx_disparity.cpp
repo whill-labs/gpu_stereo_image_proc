@@ -75,6 +75,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   typedef message_filters::Synchronizer<ApproximatePolicy> ApproximateSync;
   boost::shared_ptr<ExactSync> exact_sync_;
   boost::shared_ptr<ApproximateSync> approximate_sync_;
+
   // Publications
   boost::mutex connect_mutex_;
   ros::Publisher pub_disparity_;
@@ -89,12 +90,6 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   image_geometry::StereoCameraModel model_;
   gpu_stereo_image_proc::VXStereoSGBMProcessor
       block_matcher_; // contains scratch buffers for block matching
-
-  enum DisparityFiltering_t {
-    Filtering_None = 0,
-    Filtering_Bilateral = 1,
-    Filtering_WLS = 2
-  } disparity_filter_;
 
   virtual void onInit();
 
@@ -213,7 +208,11 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   }
 
   // Perform block matching to find the disparities
-  block_matcher_.processDisparity(l_image, r_image, model_, *disp_msg);
+  // Right now, block_matcher_ is stateful, storing the disparity internally...
+  cv::Mat_<int16_t> disparity16 =
+      block_matcher_.processDisparity(l_image, r_image, model_);
+
+  block_matcher_.disparityToDisparityImage(disparity16, model_, *disp_msg);
 
   // Adjust for any x-offset between the principal points: d' = d - (cx_l -
   // cx_r)
@@ -225,13 +224,6 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
         reinterpret_cast<float *>(&disp_msg->image.data[0]),
         disp_msg->image.step);
     cv::subtract(disp_image, cv::Scalar(cx_l - cx_r), disp_image);
-  }
-
-  if (disparity_filter_ == Filtering_Bilateral) {
-    // Use bilateral filter
-
-  } else if (disparity_filter_ == Filtering_WLS) {
-    // Use WLS filter
   }
 
   pub_disparity_.publish(disp_msg);
@@ -275,7 +267,12 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
     flags |= NVX_SGM_PYRAMIDAL_STEREO;
 
   // n.b. this requires the enums in VXSGBM.cfg and DisparityFilter_t to agree
-  disparity_filter_ = config.disparity_filter;
+  if (config.disparity_filter == VXSGBM_BilateralFilter) {
+    block_matcher_.setDisparityFiltering(
+        VXStereoSGBMProcessor::Filtering_Bilateral);
+  } else {
+    block_matcher_.setDisparityFiltering(VXStereoSGBMProcessor::Filtering_None);
+  }
 
   // check stereo method
   // Note: With single-threaded NodeHandle, configCb and imageCb can't be called
