@@ -50,6 +50,10 @@ cv::Mat_<int16_t> VXStereoSGBMProcessor::processDisparity(
   // Block matcher produces 16-bit signed (fixed point) disparity image
   stereo_matcher_->compute(left_rect, right_rect, disparity16);
 
+  if (disparity_filter_ == Filtering_Bilateral) {
+    // Do Bilateral filtering
+  }
+
   return disparity16;
 
   // // Fill in DisparityImage image data, converting to 32-bit float
