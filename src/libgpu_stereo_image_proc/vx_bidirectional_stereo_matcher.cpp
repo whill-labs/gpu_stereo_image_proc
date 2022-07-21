@@ -34,88 +34,7 @@
 #include <iostream>
 #include <ros/ros.h>
 
-#include "gpu_stereo_image_proc/vx_bidirectional_stereo_matcher.h"
-
-#define VX_CHECK_STATUS(s)                                                     \
-  do {                                                                         \
-    const auto status = (s);                                                   \
-    if (status != VX_SUCCESS) {                                                \
-      ROS_ERROR("VX ERROR: %d", status);                                       \
-    }                                                                          \
-    ROS_ASSERT(status == VX_SUCCESS);                                          \
-  } while (false)
-
-using std::cout;
-using std::endl;
-
-namespace {
-void copy_to_vx_image(vx_image dest, cv::InputArray src) {
-  cv::Mat src_mat = src.getMat();
-  const auto width = static_cast<vx_uint32>(src_mat.cols);
-  const auto height = static_cast<vx_uint32>(src_mat.rows);
-
-  vx_imagepatch_addressing_t addr;
-  addr.dim_x = width;
-  addr.dim_y = height;
-  addr.stride_x = src_mat.elemSize();
-  addr.stride_y = src_mat.step;
-  addr.scale_x = VX_SCALE_UNITY;
-  addr.scale_y = VX_SCALE_UNITY;
-  addr.step_x = 1;
-  addr.step_y = 1;
-
-  vx_rectangle_t rect;
-  rect.start_x = 0;
-  rect.start_y = 0;
-  rect.end_x = width;
-  rect.end_y = height;
-
-  const auto status = vxCopyImagePatch(dest, &rect, 0, &addr, src_mat.data,
-                                       VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
-  // ROS_ASSERT(status == VX_SUCCESS);
-}
-
-void copy_from_vx_image(cv::OutputArray dest, vx_image src) {
-  vx_uint32 width, height;
-  vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-  vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-
-  vx_df_image vx_format = VX_DF_IMAGE_VIRT;
-  vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &vx_format, sizeof(vx_format));
-  int cv_format = 0;
-  if (vx_format == VX_DF_IMAGE_U8) {
-    cv_format = CV_8U;
-  } else if (vx_format == VX_DF_IMAGE_S16) {
-    cv_format = CV_16S;
-  } else {
-    ROS_ERROR("unsupported iamge format");
-  }
-
-  dest.create(static_cast<int>(height), static_cast<int>(width), cv_format);
-  cv::Mat dest_mat = dest.getMat();
-
-  vx_imagepatch_addressing_t addr;
-  addr.dim_x = width;
-  addr.dim_y = height;
-  addr.stride_x = dest_mat.elemSize();
-  addr.stride_y = dest_mat.step;
-  addr.scale_x = VX_SCALE_UNITY;
-  addr.scale_y = VX_SCALE_UNITY;
-  addr.step_x = 1;
-  addr.step_y = 1;
-
-  vx_rectangle_t rect;
-  rect.start_x = 0;
-  rect.start_y = 0;
-  rect.end_x = width;
-  rect.end_y = height;
-
-  const auto status = vxCopyImagePatch(src, &rect, 0, &addr, dest_mat.data,
-                                       VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
-  ROS_ASSERT(status == VX_SUCCESS);
-}
-
-} // namespace
+#include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 
 VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher()
     : context_(nullptr), graph_(nullptr), left_image_(nullptr),
@@ -236,11 +155,11 @@ operator=(VXBidirectionalStereoMatcher &&obj) {
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                                            cv::InputArray right,
                                            cv::OutputArray disparity) {
-  copy_to_vx_image(left_image_, left);
-  copy_to_vx_image(right_image_, right);
+  copy_to_vx_image(left, left_image_);
+  copy_to_vx_image(right, right_image_);
 
   const auto status = vxProcessGraph(graph_);
   ROS_ASSERT(status == VX_SUCCESS);
 
-  copy_from_vx_image(disparity, disparity_);
+  copy_from_vx_image(disparity_, disparity);
 }

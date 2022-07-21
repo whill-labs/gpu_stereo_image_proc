@@ -66,10 +66,11 @@ add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 # Nodelet library
 set(VX_NODELET_NAME vx_stereo_image_proc)
 add_library(${VX_NODELET_NAME}
+            src/libgpu_stereo_image_proc/vx_stereo_matcher_base.cpp
             src/libgpu_stereo_image_proc/vx_stereo_matcher.cpp
             src/libgpu_stereo_image_proc/vx_bidirectional_stereo_matcher.cpp
-            src/libgpu_stereo_image_proc/vx_sgbm_processor.cpp
-            src/libgpu_stereo_image_proc/sgbm_processor.cpp 
+            src/libgpu_stereo_image_proc/vx_conversions.cpp 
+            src/libgpu_stereo_image_proc/msg_conversions.cpp 
             src/nodelets/vx_disparity.cpp)
 target_link_libraries(${VX_NODELET_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}

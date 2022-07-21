@@ -31,52 +31,35 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef VX_STEREO_MATCHER_H
-#define VX_STEREO_MATCHER_H
+#pragma once
 
 #include <opencv2/core.hpp>
 
 #include <NVX/nvx.h>
 #include <VX/vx.h>
 #include <VX/vxu.h>
+#include <ros/ros.h>
 
-// n.b. Doesn't actually do anything yet (June 28 2022)
-class VXBidirectionalStereoMatcher {
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
+
+class VXStereoMatcher : public VXStereoMatcherBase {
 public:
-  VXBidirectionalStereoMatcher();
+  VXStereoMatcher();
 
-  VXBidirectionalStereoMatcher(
-      const int image_width, const int image_height, const int shrink_scale = 2,
-      const int min_disparity = 0, const int max_disparity = 64,
-      const int P1 = 8, const int P2 = 109, const int sad_win_size = 5,
-      const int ct_win_size = 0, const int hc_win_size = 1, const int clip = 31,
-      const int max_diff = 16, const int uniqueness_ratio = 50,
-      const int scanline_mask = NVX_SCANLINE_CROSS,
-      const int flags = NVX_SGM_PYRAMIDAL_STEREO);
+  VXStereoMatcher(const VXStereoMatcherParams &params);
 
-  VXBidirectionalStereoMatcher(VXBidirectionalStereoMatcher &&obj);
+  // VXStereoMatcher(VXStereoMatcher &&obj);
 
-  ~VXBidirectionalStereoMatcher();
+  virtual ~VXStereoMatcher();
 
-  VXBidirectionalStereoMatcher &operator=(VXBidirectionalStereoMatcher &&obj);
+  VXStereoMatcher &operator=(VXStereoMatcher &&obj);
 
   void compute(cv::InputArray left, cv::InputArray right,
-               cv::OutputArray disparity);
+               cv::OutputArray disparity) override;
 
-private:
-  vx_context context_;
-  vx_graph graph_;
-  vx_image left_image_;
-  vx_image right_image_;
-  vx_image left_scaled_;
-  vx_image right_scaled_;
-  vx_image disparity_scaled_;
-  vx_image disparity_;
-
-  // This class is non-copyable
-  VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;
-  VXBidirectionalStereoMatcher &
-  operator=(const VXBidirectionalStereoMatcher &) = delete;
+protected:
+  // noncopyable
+  VXStereoMatcher(const VXStereoMatcher &) = delete;
+  VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;
 };
-
-#endif

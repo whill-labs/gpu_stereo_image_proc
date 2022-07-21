@@ -55,7 +55,8 @@
 #include "gpu_stereo_image_proc/VXSGBMConfig.h"
 #include <dynamic_reconfigure/server.h>
 
-#include "gpu_stereo_image_proc/vx_sgbm_processor.h"
+#include "gpu_stereo_image_proc/msg_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 namespace gpu_stereo_image_proc {
 using namespace sensor_msgs;
@@ -88,8 +89,9 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   // Processing state (note: only safe because we're single-threaded!)
   image_geometry::StereoCameraModel model_;
-  gpu_stereo_image_proc::VXStereoSGBMProcessor
-      block_matcher_; // contains scratch buffers for block matching
+
+  VXStereoMatcherParams params_;
+  std::shared_ptr<VXStereoMatcher> stereo_matcher_;
 
   virtual void onInit();
 
@@ -170,28 +172,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
                                  const CameraInfoConstPtr &l_info_msg,
                                  const ImageConstPtr &r_image_msg,
                                  const CameraInfoConstPtr &r_info_msg) {
+
   // Update the camera model
   model_.fromCameraInfo(l_info_msg, r_info_msg);
-
-  // Allocate new disparity image message
-  DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
-  disp_msg->header = l_info_msg->header;
-  disp_msg->image.header = l_info_msg->header;
-
-  // Compute window of (potentially) valid disparities
-  int border = block_matcher_.getCorrelationWindowSize() / 2;
-  int left = block_matcher_.getDisparityRange() +
-             block_matcher_.getMinDisparity() + border - 1;
-  int wtf = (block_matcher_.getMinDisparity() >= 0)
-                ? border + block_matcher_.getMinDisparity()
-                : std::max(border, -block_matcher_.getMinDisparity());
-  int right = disp_msg->image.width - 1 - wtf;
-  int top = border;
-  int bottom = disp_msg->image.height - 1 - border;
-  disp_msg->valid_window.x_offset = left;
-  disp_msg->valid_window.y_offset = top;
-  disp_msg->valid_window.width = right - left;
-  disp_msg->valid_window.height = bottom - top;
 
   // Create cv::Mat views onto all buffers
   const cv::Mat_<uint8_t> l_image =
@@ -201,18 +184,58 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)
           ->image;
 
-  const cv::Size image_size = block_matcher_.getImageSize();
-  if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
-    block_matcher_.setImageSize(cv::Size(l_image.cols, l_image.rows));
-    block_matcher_.applyConfig();
+  if (stereo_matcher_) {
+    const cv::Size image_size = stereo_matcher_->params().image_size;
+    if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
+      params_.image_size = cv::Size(l_image.cols, l_image.rows);
+      if (params_.valid()) {
+        params_.dump();
+        ROS_WARN("Creating new stereo_matcher");
+        stereo_matcher_.reset(new VXStereoMatcher(params_));
+      }
+    }
+  } else {
+    params_.image_size = cv::Size(l_image.cols, l_image.rows);
+
+    if (params_.valid()) {
+      params_.dump();
+      ROS_WARN("Creating new stereo_matcher");
+      stereo_matcher_.reset(new VXStereoMatcher(params_));
+    } else {
+      ROS_WARN("No valid stereo matcher...");
+      return;
+    }
   }
 
-  // Perform block matching to find the disparities
-  // Right now, block_matcher_ is stateful, storing the disparity internally...
-  cv::Mat_<int16_t> disparity16 =
-      block_matcher_.processDisparity(l_image, r_image, model_);
+  // Allocate new disparity image message
+  DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
+  disp_msg->header = l_info_msg->header;
+  disp_msg->image.header = l_info_msg->header;
 
-  block_matcher_.disparityToDisparityImage(disparity16, model_, *disp_msg);
+  // Compute window of (potentially) valid disparities
+
+  const int min_disparity = stereo_matcher_->params().min_disparity;
+
+  int border = stereo_matcher_->params().sad_win_size / 2;
+  int left = stereo_matcher_->params().max_disparity + border - 1;
+  int wtf = (min_disparity >= 0) ? border + min_disparity
+                                 : std::max(border, -min_disparity);
+  int right = disp_msg->image.width - 1 - wtf;
+  int top = border;
+  int bottom = disp_msg->image.height - 1 - border;
+  disp_msg->valid_window.x_offset = left;
+  disp_msg->valid_window.y_offset = top;
+  disp_msg->valid_window.width = right - left;
+  disp_msg->valid_window.height = bottom - top;
+
+  // Block matcher produces 16-bit signed (fixed point) disparity image
+  cv::Mat_<int16_t> disparity16;
+  stereo_matcher_->compute(l_image, r_image, disparity16);
+
+  disparityToDisparityImage(disparity16, model_, *disp_msg,
+                            stereo_matcher_->params().shrink_scale,
+                            stereo_matcher_->params().min_disparity,
+                            stereo_matcher_->params().max_disparity);
 
   // Adjust for any x-offset between the principal points: d' = d - (cx_l -
   // cx_r)
@@ -227,7 +250,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   }
 
   pub_disparity_.publish(disp_msg);
-}
+} // namespace gpu_stereo_image_proc
 
 void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Tweak all settings to be valid
@@ -266,32 +289,38 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   if (config.PYRAMIDAL_STEREO)
     flags |= NVX_SGM_PYRAMIDAL_STEREO;
 
-  // n.b. this requires the enums in VXSGBM.cfg and DisparityFilter_t to agree
+  // // n.b. this requires the enums in VXSGBM.cfg and DisparityFilter_t to
+  // agree
   if (config.disparity_filter == VXSGBM_BilateralFilter) {
-    block_matcher_.setDisparityFiltering(
-        VXStereoSGBMProcessor::Filtering_Bilateral);
+    ROS_DEBUG("Enabling bilateral filtering");
+    params_.filtering = VXStereoMatcherParams::Filtering_Bilateral;
   } else {
-    block_matcher_.setDisparityFiltering(VXStereoSGBMProcessor::Filtering_None);
+    ROS_DEBUG("Disabling filtering");
+    params_.filtering = VXStereoMatcherParams::Filtering_None;
   }
 
   // check stereo method
   // Note: With single-threaded NodeHandle, configCb and imageCb can't be called
   // concurrently, so this is thread-safe.
-  block_matcher_.setCorrelationWindowSize(config.correlation_window_size);
-  block_matcher_.setMinDisparity(config.min_disparity);
-  block_matcher_.setMaxDisparity(config.max_disparity);
-  block_matcher_.setUniquenessRatio(config.uniqueness_ratio);
-  block_matcher_.setP1(config.P1);
-  block_matcher_.setP2(config.P2);
-  block_matcher_.setDisp12MaxDiff(config.disp12MaxDiff);
-  block_matcher_.setClip(config.bt_clip_value);
-  block_matcher_.setCtWinSize(config.ct_win_size);
-  block_matcher_.setHcWinSize(config.hc_win_size);
-  block_matcher_.setFlags(flags);
-  block_matcher_.setPathType(scanline_mask);
-  block_matcher_.setShrinkScale(config.shrink_scale);
+  params_.sad_win_size = config.correlation_window_size;
+  params_.min_disparity = config.min_disparity;
+  params_.max_disparity = config.max_disparity;
+  params_.uniqueness_ratio = config.uniqueness_ratio;
+  params_.P1 = config.P1;
+  params_.P2 = config.P2;
+  params_.max_diff = config.disp12MaxDiff;
+  params_.clip = config.bt_clip_value;
+  params_.ct_win_size = config.ct_win_size;
+  params_.hc_win_size = config.hc_win_size;
+  params_.flags = flags;
+  params_.scanline_mask = scanline_mask;
+  params_.shrink_scale = config.shrink_scale;
 
-  block_matcher_.applyConfig();
+  if (params_.valid()) {
+    params_.dump();
+    ROS_WARN("Creating new stereo_matcher");
+    stereo_matcher_.reset(new VXStereoMatcher(params_));
+  }
 }
 
 } // namespace gpu_stereo_image_proc

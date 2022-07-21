@@ -167,6 +167,7 @@ inline int StereoSGBMProcessor::getMinDisparity() const {
 inline int StereoSGBMProcessor::getMaxDisparity() const {
   return max_disparity_;
 }
+
 inline bool StereoSGBMProcessor::setMaxDisparity(int max_d) {
   ROS_INFO("%s, in %d", __func__, max_d);
   max_disparity_ = max_d;
