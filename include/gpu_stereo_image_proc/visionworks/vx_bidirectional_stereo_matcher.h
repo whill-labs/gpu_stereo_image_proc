@@ -41,39 +41,31 @@
 #include <VX/vxu.h>
 
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 // n.b. Doesn't actually do anything yet (June 28 2022)
-class VXBidirectionalStereoMatcher {
+class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
 public:
   VXBidirectionalStereoMatcher();
+  VXBidirectionalStereoMatcher(const VXStereoMatcherParams &params);
 
-  VXBidirectionalStereoMatcher(
-      const int image_width, const int image_height, const int shrink_scale = 2,
-      const int min_disparity = 0, const int max_disparity = 64,
-      const int P1 = 8, const int P2 = 109, const int sad_win_size = 5,
-      const int ct_win_size = 0, const int hc_win_size = 1, const int clip = 31,
-      const int max_diff = 16, const int uniqueness_ratio = 50,
-      const int scanline_mask = NVX_SCANLINE_CROSS,
-      const int flags = NVX_SGM_PYRAMIDAL_STEREO);
-
-  VXBidirectionalStereoMatcher(VXBidirectionalStereoMatcher &&obj);
+  // VXBidirectionalStereoMatcher(VXBidirectionalStereoMatcher &&obj);
 
   ~VXBidirectionalStereoMatcher();
 
-  VXBidirectionalStereoMatcher &operator=(VXBidirectionalStereoMatcher &&obj);
+  // VXBidirectionalStereoMatcher &operator=(VXBidirectionalStereoMatcher
+  // &&obj);
 
   void compute(cv::InputArray left, cv::InputArray right,
-               cv::OutputArray disparity);
+               cv::OutputArray disparity) override;
 
 private:
-  vx_context context_;
-  vx_graph graph_;
-  vx_image left_image_;
-  vx_image right_image_;
-  vx_image left_scaled_;
-  vx_image right_scaled_;
-  vx_image disparity_scaled_;
-  vx_image disparity_;
+  vx_image flipped_left_;
+  vx_image flipped_right_;
+  vx_image flipped_rl_disparity_scaled_;
+  // vx_image negated_rl_disparity_scaled_;
+  // vx_image rl_disparity_scaled_;
+  vx_image flipped_rl_disparity_;
 
   // This class is non-copyable
   VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;

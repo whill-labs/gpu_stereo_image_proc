@@ -56,6 +56,7 @@
 #include <dynamic_reconfigure/server.h>
 
 #include "gpu_stereo_image_proc/msg_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 namespace gpu_stereo_image_proc {
@@ -91,7 +92,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   image_geometry::StereoCameraModel model_;
 
   VXStereoMatcherParams params_;
-  std::shared_ptr<VXStereoMatcher> stereo_matcher_;
+  std::shared_ptr<VXStereoMatcherBase> stereo_matcher_;
 
   virtual void onInit();
 
@@ -103,6 +104,8 @@ class VXDisparityNodelet : public nodelet::Nodelet {
                const CameraInfoConstPtr &r_info_msg);
 
   void configCb(Config &config, uint32_t level);
+
+  bool update_stereo_matcher();
 };
 
 void VXDisparityNodelet::onInit() {
@@ -184,28 +187,18 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)
           ->image;
 
+  params_.image_size = cv::Size(l_image.cols, l_image.rows);
   if (stereo_matcher_) {
     const cv::Size image_size = stereo_matcher_->params().image_size;
     if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
-      params_.image_size = cv::Size(l_image.cols, l_image.rows);
-      if (params_.valid()) {
-        params_.dump();
-        ROS_WARN("Creating new stereo_matcher");
-        stereo_matcher_.reset(new VXStereoMatcher(params_));
-      }
+      update_stereo_matcher();
     }
   } else {
-    params_.image_size = cv::Size(l_image.cols, l_image.rows);
-
-    if (params_.valid()) {
-      params_.dump();
-      ROS_WARN("Creating new stereo_matcher");
-      stereo_matcher_.reset(new VXStereoMatcher(params_));
-    } else {
-      ROS_WARN("No valid stereo matcher...");
-      return;
-    }
+    update_stereo_matcher();
   }
+
+  if (!stereo_matcher_)
+    return;
 
   // Allocate new disparity image message
   DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
@@ -233,7 +226,6 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   stereo_matcher_->compute(l_image, r_image, disparity16);
 
   disparityToDisparityImage(disparity16, model_, *disp_msg,
-                            stereo_matcher_->params().shrink_scale,
                             stereo_matcher_->params().min_disparity,
                             stereo_matcher_->params().max_disparity);
 
@@ -289,13 +281,17 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   if (config.PYRAMIDAL_STEREO)
     flags |= NVX_SGM_PYRAMIDAL_STEREO;
 
-  // // n.b. this requires the enums in VXSGBM.cfg and DisparityFilter_t to
-  // agree
   if (config.disparity_filter == VXSGBM_BilateralFilter) {
-    ROS_DEBUG("Enabling bilateral filtering");
+    ROS_INFO("Enabling bilateral filtering");
     params_.filtering = VXStereoMatcherParams::Filtering_Bilateral;
+  } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftOnly) {
+    ROS_INFO("Enabling Left-only WLS filtering");
+    params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftOnly;
+  } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftRight) {
+    ROS_INFO("Enabling Left-Right WLS filtering");
+    params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftRight;
   } else {
-    ROS_DEBUG("Disabling filtering");
+    ROS_INFO("Disabling filtering");
     params_.filtering = VXStereoMatcherParams::Filtering_None;
   }
 
@@ -316,11 +312,26 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   params_.scanline_mask = scanline_mask;
   params_.shrink_scale = config.shrink_scale;
 
-  if (params_.valid()) {
-    params_.dump();
-    ROS_WARN("Creating new stereo_matcher");
+  update_stereo_matcher();
+}
+
+bool VXDisparityNodelet::update_stereo_matcher() {
+  ROS_WARN("Updating stereo_matcher");
+
+  if (!params_.valid()) {
+    ROS_WARN("No valid stereo matcher...");
+    return false;
+  }
+
+  params_.dump();
+  ROS_WARN("Creating new stereo_matcher");
+  if (params_.filtering == VXStereoMatcherParams::Filtering_WLS_LeftRight) {
+    ROS_INFO("Creating VXBidirectionalStereoMatcher");
+    stereo_matcher_.reset(new VXBidirectionalStereoMatcher(params_));
+  } else {
     stereo_matcher_.reset(new VXStereoMatcher(params_));
   }
+  return true;
 }
 
 } // namespace gpu_stereo_image_proc

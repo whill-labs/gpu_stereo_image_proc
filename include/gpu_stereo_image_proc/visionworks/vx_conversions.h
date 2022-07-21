@@ -42,7 +42,7 @@
   do {                                                                         \
     const auto status = (s);                                                   \
     if (status != VX_SUCCESS) {                                                \
-      ROS_ERROR("VX ERROR: %d", status);                                       \
+      ROS_ERROR("VX ERROR (%d): %d", __LINE__, status);                        \
     }                                                                          \
     ROS_ASSERT(status == VX_SUCCESS);                                          \
   } while (false)

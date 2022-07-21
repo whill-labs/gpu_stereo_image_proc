@@ -35,50 +35,65 @@
 #include <ros/ros.h>
 
 #include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
+#include <NVX/nvx_opencv_interop.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/ximgproc/disparity_filter.hpp>
 
 VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher()
-    : context_(nullptr), graph_(nullptr), left_image_(nullptr),
-      right_image_(nullptr), left_scaled_(nullptr), right_scaled_(nullptr),
-      disparity_scaled_(nullptr), disparity_(nullptr) {}
+    : VXStereoMatcherBase() {}
 
 VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
-    const int image_width, const int image_height, const int shrink_scale,
-    const int min_disparity, const int max_disparity, const int P1,
-    const int P2, const int sad_win_size, const int ct_win_size,
-    const int hc_win_size, const int clip, const int max_diff,
-    const int uniqueness_ratio, const int scanline_mask, const int flags)
-    : context_(nullptr), graph_(nullptr), left_image_(nullptr),
-      right_image_(nullptr), left_scaled_(nullptr), right_scaled_(nullptr),
-      disparity_scaled_(nullptr), disparity_(nullptr) {
+    const VXStereoMatcherParams &params)
+    : VXStereoMatcherBase(params) {
   vx_status status;
 
-  context_ = vxCreateContext();
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)context_));
-
-  graph_ = vxCreateGraph(context_);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)graph_));
-
-  left_image_ =
-      vxCreateImage(context_, image_width, image_height, VX_DF_IMAGE_U8);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)left_image_));
-  right_image_ =
-      vxCreateImage(context_, image_width, image_height, VX_DF_IMAGE_U8);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)right_image_));
-  disparity_ =
-      vxCreateImage(context_, image_width, image_height, VX_DF_IMAGE_S16);
-  VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_));
-
-  if (shrink_scale > 1) {
-    left_scaled_ = vxCreateImage(context_, image_width / shrink_scale,
-                                 image_height / shrink_scale, VX_DF_IMAGE_U8);
+  if (params.shrink_scale > 1) {
+    left_scaled_ = vxCreateImage(
+        context_, params.image_size.width / params.shrink_scale,
+        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_U8);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
-    right_scaled_ = vxCreateImage(context_, image_width / shrink_scale,
-                                  image_height / shrink_scale, VX_DF_IMAGE_U8);
+
+    right_scaled_ = vxCreateImage(
+        context_, params.image_size.width / params.shrink_scale,
+        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_U8);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
-    disparity_scaled_ =
-        vxCreateImage(context_, image_width / shrink_scale,
-                      image_height / shrink_scale, VX_DF_IMAGE_S16);
+
+    disparity_scaled_ = vxCreateImage(
+        context_, params.image_size.width / params.shrink_scale,
+        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_S16);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_scaled_));
+
+    flipped_left_ = vxCreateImage(
+        context_, params.image_size.width / params.shrink_scale,
+        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_U8);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_left_));
+
+    flipped_right_ = vxCreateImage(
+        context_, params.image_size.width / params.shrink_scale,
+        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_U8);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_right_));
+
+    flipped_rl_disparity_scaled_ = vxCreateImage(
+        context_, params.image_size.width / params.shrink_scale,
+        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_S16);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_scaled_));
+
+    // rl_disparity_scaled_ = vxCreateImage(
+    //     context_, params.image_size.width / params.shrink_scale,
+    //     params.image_size.height / params.shrink_scale, VX_DF_IMAGE_S16);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)rl_disparity_scaled_));
+
+    // negated_rl_disparity_scaled_ = vxCreateImage(
+    //     context_, params.image_size.width / params.shrink_scale,
+    //     params.image_size.height / params.shrink_scale, VX_DF_IMAGE_S16);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)negated_rl_disparity_scaled_));
+
+    flipped_rl_disparity_ =
+        vxCreateImage(context_, params.image_size.width,
+                      params.image_size.height, VX_DF_IMAGE_S16);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_));
 
     vx_node left_scale_node = vxScaleImageNode(
         graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
@@ -87,79 +102,133 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
         graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
+    vx_node left_flip_node = nvxFlipImageNode(
+        graph_, left_scaled_, flipped_left_, NVX_FLIP_HORIZONTAL);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
+    vx_node right_flip_node = nvxFlipImageNode(
+        graph_, right_scaled_, flipped_right_, NVX_FLIP_HORIZONTAL);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
     vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_scaled_, right_scaled_, disparity_scaled_, min_disparity,
-        max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip,
-        max_diff, uniqueness_ratio, scanline_mask, flags);
+        graph_, left_scaled_, right_scaled_, disparity_scaled_,
+        params.min_disparity, params.max_disparity, params.P1, params.P2,
+        params.sad_win_size, params.ct_win_size, params.hc_win_size,
+        params.clip, params.max_diff, params.uniqueness_ratio,
+        params.scanline_mask, params.flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
-    vx_node disparity_scale_node = vxScaleImageNode(
-        graph_, disparity_scaled_, disparity_, VX_INTERPOLATION_BILINEAR);
+
+    vx_node rl_sgm_node = nvxSemiGlobalMatchingNode(
+        graph_, flipped_right_, flipped_left_, flipped_rl_disparity_scaled_,
+        params.min_disparity, params.max_disparity, params.P1, params.P2,
+        params.sad_win_size, params.ct_win_size, params.hc_win_size,
+        params.clip, params.max_diff, params.uniqueness_ratio,
+        params.scanline_mask, params.flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
+    // vx_node disparity_flip_node =
+    //     nvxFlipImageNode(graph_, flipped_rl_disparity_scaled_,
+    //                      negated_rl_disparity_scaled_, NVX_FLIP_HORIZONTAL);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
+    // vx_node disparity_negate_node = nvxMultiplyByScalarNode(
+    //     graph_, rl_disparity_scaled_, negated_rl_disparity_scaled_, -1);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
+    // vx_node disparity_scale_node = vxScaleImageNode(
+    //     graph_, disparity_scaled_, disparity_, VX_INTERPOLATION_BILINEAR);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
+    // vx_node rl_disparity_scale_node =
+    //     vxScaleImageNode(graph_, flipped_rl_disparity_scaled_,
+    //                      flipped_rl_disparity_, VX_INTERPOLATION_BILINEAR);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
     vxReleaseNode(&left_scale_node);
     vxReleaseNode(&right_scale_node);
-    vxReleaseNode(&disparity_scale_node);
+    // vxReleaseNode(&left_flip_node);
+    // vxReleaseNode(&right_flip_node);
+    // vxReleaseNode(&disparity_scale_node);
+    // vxReleaseNode(&rl_disparity_scale_node);
+    // vxReleaseNode(&disparity_flip_node);
+    // vxReleaseNode(&disparity_negate_node);
     vxReleaseNode(&sgm_node);
+    vxReleaseNode(&rl_sgm_node);
   } else {
     ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, "
              "clip %d, max_diff %d, UR %d, Scantype "
              "%02X, Flags %02X",
-             min_disparity, max_disparity, P1, P2, sad_win_size, ct_win_size,
-             hc_win_size, clip, max_diff, uniqueness_ratio, scanline_mask,
-             flags);
+             params.min_disparity, params.max_disparity, params.P1, params.P2,
+             params.sad_win_size, params.ct_win_size, params.hc_win_size,
+             params.clip, params.max_diff, params.uniqueness_ratio,
+             params.scanline_mask, params.flags);
     vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_image_, right_image_, disparity_, min_disparity,
-        max_disparity, P1, P2, sad_win_size, ct_win_size, hc_win_size, clip,
-        max_diff, uniqueness_ratio, scanline_mask, flags);
+        graph_, left_image_, right_image_, disparity_, params.min_disparity,
+        params.max_disparity, params.P1, params.P2, params.sad_win_size,
+        params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
+        params.uniqueness_ratio, params.scanline_mask, params.flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
     vxReleaseNode(&sgm_node);
   }
 }
 
-VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
-    VXBidirectionalStereoMatcher &&obj)
-    : context_(obj.context_), graph_(obj.graph_), left_image_(obj.left_image_),
-      right_image_(obj.right_image_), disparity_(obj.disparity_) {
-  obj.context_ = 0;
-  obj.graph_ = 0;
-  obj.left_image_ = 0;
-  obj.right_image_ = 0;
-  obj.disparity_ = 0;
-}
-
-VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {
-  vxReleaseImage(&left_image_);
-  vxReleaseImage(&right_image_);
-  vxReleaseImage(&disparity_);
-  vxReleaseGraph(&graph_);
-  vxReleaseContext(&context_);
-}
-
-VXBidirectionalStereoMatcher &VXBidirectionalStereoMatcher::
-operator=(VXBidirectionalStereoMatcher &&obj) {
-  context_ = obj.context_;
-  graph_ = obj.graph_;
-  left_image_ = obj.left_image_;
-  right_image_ = obj.right_image_;
-  disparity_ = obj.disparity_;
-
-  obj.context_ = 0;
-  obj.graph_ = 0;
-  obj.left_image_ = 0;
-  obj.right_image_ = 0;
-  obj.disparity_ = 0;
-
-  return *this;
-}
+VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
 
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                                            cv::InputArray right,
                                            cv::OutputArray disparity) {
+  ROS_WARN("(%d,%d)", left.getMat().size().width, left.getMat().size().height);
+
   copy_to_vx_image(left, left_image_);
   copy_to_vx_image(right, right_image_);
 
   const auto status = vxProcessGraph(graph_);
   ROS_ASSERT(status == VX_SUCCESS);
 
-  copy_from_vx_image(disparity_, disparity);
+  if (params_.filtering == VXStereoMatcherParams::Filtering_WLS_LeftRight) {
+
+    // This algorithm works on the **scaled** image
+    // cv::Mat flipped_rl_disparity_mat, rl_disparity_mat, lr_disparity_mat;
+
+    cv::cuda::GpuMat g_flipped_rl_disparity;
+
+    nvx_cv::VXImageToCVMatMapper lr_disparity_map(
+        disparity_scaled_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
+    nvx_cv::VXImageToCVMatMapper flipped_rl_disparity_map(
+        flipped_rl_disparity_scaled_, 0, NULL, VX_READ_ONLY,
+        NVX_MEMORY_TYPE_CUDA);
+
+    // Flip and negate RL disparities
+    cv::cuda::flip(flipped_rl_disparity_map.getGpuMat(), g_flipped_rl_disparity,
+                   1);
+    g_flipped_rl_disparity.convertTo(g_flipped_rl_disparity,
+                                     g_flipped_rl_disparity.type(), -1);
+
+    cv::Mat rl_disparity_mat;
+    g_flipped_rl_disparity.download(rl_disparity_mat);
+
+    // Since we don't use an OpenCV matcher, we need to create a fake
+    // matcher to initialize the WLS filter
+    //
+    // These are the only params used to initialize the WLS filter...
+    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(
+        params_.min_disparity, (params_.max_disparity - params_.min_disparity),
+        params_.sad_win_size);
+    cv ::Ptr<cv::ximgproc::DisparityWLSFilter> wls =
+        cv::ximgproc::createDisparityWLSFilter(sgbm);
+
+    cv::Mat filter_output;
+    wls->filter(lr_disparity_map.getMat(), left.getMat(), filter_output,
+                rl_disparity_mat, cv::Rect(), right.getMat());
+
+    // And scale back up
+    cv::Mat scaled_output;
+    cv::resize(filter_output, scaled_output, cv::Size(), params_.shrink_scale,
+               params_.shrink_scale, cv::INTER_NEAREST);
+
+    disparity.assign(scaled_output * params_.shrink_scale);
+  } else {
+    // Not sure why you'd be here otherwise...
+    copy_from_vx_image(disparity_, disparity);
+  }
 }

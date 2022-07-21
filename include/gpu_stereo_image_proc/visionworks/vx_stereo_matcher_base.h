@@ -44,7 +44,12 @@
 
 struct VXStereoMatcherParams {
 public:
-  enum DisparityFiltering_t { Filtering_None = 0, Filtering_Bilateral = 1 };
+  enum DisparityFiltering_t {
+    Filtering_None = 0,
+    Filtering_Bilateral = 1,
+    Filtering_WLS_LeftOnly = 2,
+    Filtering_WLS_LeftRight = 3
+  };
 
   VXStereoMatcherParams()
       : shrink_scale(2), min_disparity(0), max_disparity(64), P1(8), P2(109),
@@ -91,6 +96,10 @@ public:
       return "None";
     } else if (filtering == Filtering_Bilateral) {
       return "Bilateral";
+    } else if (filtering == Filtering_WLS_LeftOnly) {
+      return "WLS Left-only";
+    } else if (filtering == Filtering_WLS_LeftRight) {
+      return "WLS Left-Right";
     }
 
     return "(Unknown)";

@@ -32,8 +32,11 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
+#include <NVX/nvx_opencv_interop.hpp>
 #include <iostream>
 #include <opencv2/cudastereo.hpp>
+#include <opencv2/cudawarping.hpp>
+#include <opencv2/imgproc.hpp>
 #include <ros/ros.h>
 
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
@@ -74,8 +77,11 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
         params.clip, params.max_diff, params.uniqueness_ratio,
         params.scanline_mask, params.flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
     vx_node disparity_scale_node = vxScaleImageNode(
-        graph_, disparity_scaled_, disparity_, VX_INTERPOLATION_BILINEAR);
+        graph_, disparity_scaled_, disparity_,
+        VX_INTERPOLATION_NEAREST_NEIGHBOR); // Scale up disparities using
+                                            // nearest neighbor!
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
     vxReleaseNode(&left_scale_node);
@@ -102,22 +108,6 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
 
 VXStereoMatcher::~VXStereoMatcher() {}
 
-// VXStereoMatcher &VXStereoMatcher::operator=(VXStereoMatcher &&obj) {
-//   context_ = obj.context_;
-//   graph_ = obj.graph_;
-//   left_image_ = obj.left_image_;
-//   right_image_ = obj.right_image_;
-//   disparity_ = obj.disparity_;
-
-//   obj.context_ = 0;
-//   obj.graph_ = 0;
-//   obj.left_image_ = 0;
-//   obj.right_image_ = 0;
-//   obj.disparity_ = 0;
-
-//   return *this;
-// }
-
 void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
                               cv::OutputArray disparity) {
   copy_to_vx_image(left, left_image_);
@@ -126,24 +116,39 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
   const auto status = vxProcessGraph(graph_);
   ROS_ASSERT(status == VX_SUCCESS);
 
-  copy_from_vx_image(disparity_, disparity);
-
   if (params_.filtering == VXStereoMatcherParams::Filtering_Bilateral) {
-    // Do Bilateral filtering
-    const int nDisp =
-        (params_.max_disparity - params_.min_disparity) * params_.shrink_scale;
+    // Do Bilateral filtering on the **scaled** disparity
+    const int nDisp = (params_.max_disparity - params_.min_disparity);
     const int radius = 3;
     const int iters = 1;
 
-    cv::cuda::GpuMat disparity_in, left_img, disparity_out;
-    disparity_in.upload(disparity);
-    left_img.upload(left);
+    cv::cuda::GpuMat g_filtered_scaled, g_filtered;
+
+    nvx_cv::VXImageToCVMatMapper disparity_map(
+        disparity_scaled_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
+    nvx_cv::VXImageToCVMatMapper left_map(left_scaled_, 0, NULL, VX_READ_ONLY,
+                                          NVX_MEMORY_TYPE_CUDA);
 
     cv::Ptr<cv::cuda::DisparityBilateralFilter> pCudaBilFilter =
         cv::cuda::createDisparityBilateralFilter(nDisp, radius, iters);
 
-    pCudaBilFilter->apply(disparity_in, left_img, disparity_out);
+    pCudaBilFilter->apply(disparity_map.getGpuMat(), left_map.getGpuMat(),
+                          g_filtered_scaled);
 
-    disparity_out.download(disparity);
+    cv::cuda::resize(g_filtered_scaled, g_filtered, cv::Size(),
+                     params_.shrink_scale, params_.shrink_scale);
+
+    g_filtered.download(disparity);
+
+  } else if (params_.filtering ==
+             VXStereoMatcherParams::Filtering_WLS_LeftOnly) {
+    ROS_WARN_THROTTLE(1, "Left-only WLS filtering not implemented");
+  } else {
+    // No filtering, just use the scaled disparity
+    copy_from_vx_image(disparity_, disparity);
   }
+
+  // scale disparities up to full-sized image disparities
+  // n.b. this could be done in VXworks (?) but I can't figure out how...
+  disparity.assign(disparity.getMat() * params_.shrink_scale);
 }

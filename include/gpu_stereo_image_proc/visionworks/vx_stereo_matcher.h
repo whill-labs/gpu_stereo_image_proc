@@ -53,7 +53,7 @@ public:
 
   virtual ~VXStereoMatcher();
 
-  VXStereoMatcher &operator=(VXStereoMatcher &&obj);
+  // VXStereoMatcher &operator=(VXStereoMatcher &&obj);
 
   void compute(cv::InputArray left, cv::InputArray right,
                cv::OutputArray disparity) override;

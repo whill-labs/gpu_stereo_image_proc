@@ -6,11 +6,10 @@
 void disparityToDisparityImage(const cv::Mat_<int16_t> disparity16,
                                const image_geometry::StereoCameraModel &model,
                                stereo_msgs::DisparityImage &disparity,
-                               int shrink_scale, int min_disparity,
-                               int max_disparity) {
+                               int min_disparity, int max_disparity) {
 
-  const int DPP = 16; // disparities per pixel
-  const double inv_dpp = static_cast<double>(shrink_scale) / DPP;
+  const int DPP = 16;               // disparities per pixel
+  const double inv_dpp = 1.0 / DPP; // shrink_scale / DPP
 
   // Fill in DisparityImage image data, converting to 32-bit float
   sensor_msgs::Image &dimage = disparity.image;
