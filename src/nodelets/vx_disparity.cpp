@@ -166,7 +166,7 @@ void VXDisparityNodelet::onInit() {
 void VXDisparityNodelet::connectCb() {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
   if ((pub_disparity_.getNumSubscribers() == 0) &&
-      (pub_scaled_disparity_q.getNumSubscribers() == 0)) {
+      (pub_scaled_disparity_.getNumSubscribers() == 0)) {
     sub_l_image_.unsubscribe();
     sub_l_info_.unsubscribe();
     sub_r_image_.unsubscribe();
@@ -223,45 +223,70 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 
   const int min_disparity = stereo_matcher_->params().min_disparity;
 
-  int border = stereo_matcher_->params().sad_win_size / 2;
-  int left = stereo_matcher_->params().max_disparity + border - 1;
-  int wtf = (min_disparity >= 0) ? border + min_disparity
-                                 : std::max(border, -min_disparity);
-  int right = disp_msg->image.width - 1 - wtf;
-  int top = border;
-  int bottom = disp_msg->image.height - 1 - border;
-  disp_msg->valid_window.x_offset = left;
-  disp_msg->valid_window.y_offset = top;
-  disp_msg->valid_window.width = right - left;
-  disp_msg->valid_window.height = bottom - top;
+  {
+    int border = stereo_matcher_->params().sad_win_size / 2;
+    int left = stereo_matcher_->params().max_disparity + border - 1;
+    int wtf = (min_disparity >= 0) ? border + min_disparity
+                                   : std::max(border, -min_disparity);
+    int right = disp_msg->image.width - 1 - wtf;
+    int top = border;
+    int bottom = disp_msg->image.height - 1 - border;
+    disp_msg->valid_window.x_offset = left;
+    disp_msg->valid_window.y_offset = top;
+    disp_msg->valid_window.width = right - left;
+    disp_msg->valid_window.height = bottom - top;
 
-  // Block matcher produces 16-bit signed (fixed point) disparity image
-  cv::Mat_<int16_t> disparity16;
-  stereo_matcher_->compute(l_image, r_image, disparity16);
+    // Block matcher produces 16-bit signed (fixed point) disparity image
+    cv::Mat_<int16_t> disparity16;
+    stereo_matcher_->compute(l_image, r_image, disparity16);
 
-  disparityToDisparityImage(disparity16, model_, *disp_msg,
-                            stereo_matcher_->params().min_disparity,
-                            stereo_matcher_->params().max_disparity);
+    disparityToDisparityImage(disparity16, model_, *disp_msg,
+                              stereo_matcher_->params().min_disparity,
+                              stereo_matcher_->params().max_disparity);
 
-  // Adjust for any x-offset between the principal points: d' = d - (cx_l -
-  // cx_r)
-  double cx_l = model_.left().cx();
-  double cx_r = model_.right().cx();
-  if (cx_l != cx_r) {
-    cv::Mat_<float> disp_image(
-        disp_msg->image.height, disp_msg->image.width,
-        reinterpret_cast<float *>(&disp_msg->image.data[0]),
-        disp_msg->image.step);
-    cv::subtract(disp_image, cv::Scalar(cx_l - cx_r), disp_image);
+    // Adjust for any x-offset between the principal points: d' = d - (cx_l -
+    // cx_r)
+    double cx_l = model_.left().cx();
+    double cx_r = model_.right().cx();
+    if (cx_l != cx_r) {
+      cv::Mat_<float> disp_image(
+          disp_msg->image.height, disp_msg->image.width,
+          reinterpret_cast<float *>(&disp_msg->image.data[0]),
+          disp_msg->image.step);
+      cv::subtract(disp_image, cv::Scalar(cx_l - cx_r), disp_image);
+    }
+    pub_disparity_.publish(disp_msg);
   }
-  pub_disparity_.publish(disp_msg);
 
-  cv::Mat_<int16_t> scaledDisparityS16 = stereo_matcher_->scaledDisparityMat();
-  disparityToDisparityImage(disparity16, model_, *disp_msg,
-                            stereo_matcher_->params().min_disparity,
-                            stereo_matcher_->params().max_disparity,
-                            stereo_matcher_->params().shrink_scale);
-  pub_scaled_disparity_.publish(disp_msg);
+  {
+    DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
+    disp_msg->header = l_info_msg->header;
+    disp_msg->image.header = l_info_msg->header;
+
+    // Compute window of (potentially) valid disparities
+
+    const int min_disparity = stereo_matcher_->params().min_disparity;
+
+    int border = stereo_matcher_->params().sad_win_size / 2;
+    int left = stereo_matcher_->params().max_disparity + border - 1;
+    int wtf = (min_disparity >= 0) ? border + min_disparity
+                                   : std::max(border, -min_disparity);
+    int right = disp_msg->image.width - 1 - wtf;
+    int top = border;
+    int bottom = disp_msg->image.height - 1 - border;
+    disp_msg->valid_window.x_offset = left;
+    disp_msg->valid_window.y_offset = top;
+    disp_msg->valid_window.width = right - left;
+    disp_msg->valid_window.height = bottom - top;
+
+    cv::Mat_<int16_t> scaledDisparityS16 =
+        stereo_matcher_->scaledDisparityMat();
+    disparityToDisparityImage(scaledDisparityS16, model_, *disp_msg,
+                              stereo_matcher_->params().min_disparity,
+                              stereo_matcher_->params().max_disparity,
+                              stereo_matcher_->params().shrink_scale);
+    pub_scaled_disparity_.publish(disp_msg);
+  }
 
   if (debug_topics_) {
 

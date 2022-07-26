@@ -81,7 +81,8 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
     vx_node disparity_scale_node = vxScaleImageNode(
         graph_, disparity_scaled_, disparity_,
         VX_INTERPOLATION_NEAREST_NEIGHBOR); // Scale up disparities using
-                                            // nearest neighbor!
+                                            // nearest neighbor to avoid
+                                            // interpolation effects
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
     vxReleaseNode(&left_scale_node);
