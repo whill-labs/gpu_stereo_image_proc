@@ -35,9 +35,9 @@
 #if ((BOOST_VERSION / 100) % 1000) >= 53
 #include <boost/thread/lock_guard.hpp>
 #endif
-
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
+#include <memory>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
@@ -80,7 +80,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   // Publications
   boost::mutex connect_mutex_;
-  ros::Publisher pub_disparity_;
+  ros::Publisher pub_disparity_, debug_lr_disparity_, debug_rl_disparity_;
 
   // Dynamic reconfigure
   boost::recursive_mutex config_mutex_;
@@ -93,6 +93,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   VXStereoMatcherParams params_;
   std::shared_ptr<VXStereoMatcherBase> stereo_matcher_;
+  bool debug_topics_;
 
   virtual void onInit();
 
@@ -147,6 +148,14 @@ void VXDisparityNodelet::onInit() {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
   pub_disparity_ =
       nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
+
+  private_nh.param("debug", debug_topics_, false);
+  if (debug_topics_) {
+    ROS_INFO("Publishing debug topics");
+    debug_lr_disparity_ = nh.advertise<DisparityImage>("debug/lr_disparity", 1);
+
+    debug_rl_disparity_ = nh.advertise<DisparityImage>("debug/rl_disparity", 1);
+  }
 }
 
 // Handles (un)subscribing when clients (un)subscribe
@@ -242,6 +251,38 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   }
 
   pub_disparity_.publish(disp_msg);
+
+  if (debug_topics_) {
+
+    DisparityImagePtr lr_disp_msg = boost::make_shared<DisparityImage>();
+    lr_disp_msg->header = l_info_msg->header;
+    lr_disp_msg->image.header = l_info_msg->header;
+
+    // This is a copy, so only do it if necessary..
+    cv::Mat scaledDisparity = stereo_matcher_->scaledDisparityMat();
+    disparityToDisparityImage(scaledDisparity, model_, *lr_disp_msg,
+                              stereo_matcher_->params().min_disparity,
+                              stereo_matcher_->params().max_disparity,
+                              stereo_matcher_->params().shrink_scale);
+    debug_lr_disparity_.publish(lr_disp_msg);
+
+    if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
+            std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
+                stereo_matcher_)) {
+
+      DisparityImagePtr rl_disp_msg = boost::make_shared<DisparityImage>();
+      rl_disp_msg->header = l_info_msg->header;
+      rl_disp_msg->image.header = l_info_msg->header;
+
+      // This is a copy, so only do it if necessary..
+      cv::Mat rlScaledDisparity = bm->scaledRLDisparityMat();
+      disparityToDisparityImage(rlScaledDisparity, model_, *rl_disp_msg,
+                                stereo_matcher_->params().min_disparity,
+                                stereo_matcher_->params().max_disparity,
+                                stereo_matcher_->params().shrink_scale);
+      debug_rl_disparity_.publish(rl_disp_msg);
+    }
+  }
 } // namespace gpu_stereo_image_proc
 
 void VXDisparityNodelet::configCb(Config &config, uint32_t level) {

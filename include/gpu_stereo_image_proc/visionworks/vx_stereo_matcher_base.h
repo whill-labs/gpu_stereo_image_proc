@@ -36,6 +36,7 @@
 #include <opencv2/core.hpp>
 
 #include <NVX/nvx.h>
+#include <NVX/nvx_opencv_interop.hpp>
 #include <VX/vx.h>
 #include <VX/vxu.h>
 #include <ros/ros.h>
@@ -132,6 +133,14 @@ public:
                        cv::OutputArray disparity) = 0;
 
   const VXStereoMatcherParams &params() const { return params_; }
+
+  cv::Mat scaledDisparityMat() const {
+    cv::Mat output;
+    nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
+                                     VX_MEMORY_TYPE_HOST);
+    map.getMat().copyTo(output);
+    return output;
+  }
 
 protected:
   vx_context context_;

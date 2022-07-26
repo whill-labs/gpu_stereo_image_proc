@@ -6,7 +6,8 @@
 void disparityToDisparityImage(const cv::Mat_<int16_t> disparity16,
                                const image_geometry::StereoCameraModel &model,
                                stereo_msgs::DisparityImage &disparity,
-                               int min_disparity, int max_disparity) {
+                               int min_disparity, int max_disparity,
+                               float shrink_scale) {
 
   const int DPP = 16;               // disparities per pixel
   const double inv_dpp = 1.0 / DPP; // shrink_scale / DPP
@@ -23,12 +24,13 @@ void disparityToDisparityImage(const cv::Mat_<int16_t> disparity16,
   // We convert from fixed-point to float disparity and also adjust for any
   // x-offset between the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
   disparity16.convertTo(dmat, dmat.type(), inv_dpp,
-                        -(model.left().cx() - model.right().cx()));
+                        -(model.left().cx() - model.right().cx()) /
+                            shrink_scale);
   ROS_ASSERT(dmat.data == &dimage.data[0]);
   /// @todo is_bigendian? :)
 
   // Stereo parameters
-  disparity.f = model.right().fx();
+  disparity.f = model.right().fx() / shrink_scale;
   disparity.T = model.baseline();
 
   /// @todo Window of (potentially) valid disparities

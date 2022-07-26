@@ -59,13 +59,21 @@ public:
   void compute(cv::InputArray left, cv::InputArray right,
                cv::OutputArray disparity) override;
 
+  cv::Mat scaledRLDisparityMat() const {
+    cv::Mat output;
+    nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_scaled_, 0, NULL,
+                                     VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    map.getMat().copyTo(output);
+    return output;
+  }
+
 private:
   vx_image flipped_left_;
   vx_image flipped_right_;
   vx_image flipped_rl_disparity_scaled_;
   // vx_image negated_rl_disparity_scaled_;
   // vx_image rl_disparity_scaled_;
-  vx_image flipped_rl_disparity_;
+  // vx_image flipped_rl_disparity_;
 
   // This class is non-copyable
   VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;

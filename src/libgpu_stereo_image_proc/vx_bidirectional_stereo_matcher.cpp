@@ -90,10 +90,10 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
     //     params.image_size.height / params.shrink_scale, VX_DF_IMAGE_S16);
     // VX_CHECK_STATUS(vxGetStatus((vx_reference)negated_rl_disparity_scaled_));
 
-    flipped_rl_disparity_ =
-        vxCreateImage(context_, params.image_size.width,
-                      params.image_size.height, VX_DF_IMAGE_S16);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_));
+    // flipped_rl_disparity_ =
+    //     vxCreateImage(context_, params.image_size.width,
+    //                   params.image_size.height, VX_DF_IMAGE_S16);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_));
 
     vx_node left_scale_node = vxScaleImageNode(
         graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
@@ -177,8 +177,6 @@ VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                                            cv::InputArray right,
                                            cv::OutputArray disparity) {
-  ROS_WARN("(%d,%d)", left.getMat().size().width, left.getMat().size().height);
-
   copy_to_vx_image(left, left_image_);
   copy_to_vx_image(right, right_image_);
 
@@ -190,22 +188,23 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
     // This algorithm works on the **scaled** image
     // cv::Mat flipped_rl_disparity_mat, rl_disparity_mat, lr_disparity_mat;
 
-    cv::cuda::GpuMat g_flipped_rl_disparity;
+    cv::Mat rl_disparity;
 
     nvx_cv::VXImageToCVMatMapper lr_disparity_map(
-        disparity_scaled_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
+        disparity_scaled_, 0, NULL, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+
+    nvx_cv::VXImageToCVMatMapper right_map(right_scaled_, 0, NULL, VX_READ_ONLY,
+                                           VX_MEMORY_TYPE_HOST);
+    nvx_cv::VXImageToCVMatMapper left_map(left_scaled_, 0, NULL, VX_READ_ONLY,
+                                          VX_MEMORY_TYPE_HOST);
+
     nvx_cv::VXImageToCVMatMapper flipped_rl_disparity_map(
         flipped_rl_disparity_scaled_, 0, NULL, VX_READ_ONLY,
-        NVX_MEMORY_TYPE_CUDA);
+        VX_MEMORY_TYPE_HOST);
 
     // Flip and negate RL disparities
-    cv::cuda::flip(flipped_rl_disparity_map.getGpuMat(), g_flipped_rl_disparity,
-                   1);
-    g_flipped_rl_disparity.convertTo(g_flipped_rl_disparity,
-                                     g_flipped_rl_disparity.type(), -1);
-
-    cv::Mat rl_disparity_mat;
-    g_flipped_rl_disparity.download(rl_disparity_mat);
+    cv::flip(flipped_rl_disparity_map.getMat(), rl_disparity, 1);
+    rl_disparity *= -1;
 
     // Since we don't use an OpenCV matcher, we need to create a fake
     // matcher to initialize the WLS filter
@@ -218,8 +217,8 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
         cv::ximgproc::createDisparityWLSFilter(sgbm);
 
     cv::Mat filter_output;
-    wls->filter(lr_disparity_map.getMat(), left.getMat(), filter_output,
-                rl_disparity_mat, cv::Rect(), right.getMat());
+    wls->filter(lr_disparity_map.getMat(), left_map.getMat(), filter_output,
+                rl_disparity, cv::Rect(), right_map.getMat());
 
     // And scale back up
     cv::Mat scaled_output;
@@ -228,7 +227,10 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
 
     disparity.assign(scaled_output * params_.shrink_scale);
   } else {
+    ROS_WARN("In VXBidirectionalStereoMatcher but not doing WLSFiltering;  "
+             "this shouldn't happen.");
     // Not sure why you'd be here otherwise...
     copy_from_vx_image(disparity_, disparity);
+    disparity.assign(disparity.getMat() * params_.shrink_scale);
   }
 }

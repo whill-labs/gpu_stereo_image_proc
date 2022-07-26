@@ -7,4 +7,5 @@
 void disparityToDisparityImage(const cv::Mat_<int16_t> disparity16,
                                const image_geometry::StereoCameraModel &model,
                                stereo_msgs::DisparityImage &disparity,
-                               int min_disparity, int max_disparity);
+                               int min_disparity, int max_disparity,
+                               float shrink_scale = 1.0);
