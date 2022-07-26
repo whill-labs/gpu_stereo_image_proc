@@ -55,6 +55,7 @@
 #include "gpu_stereo_image_proc/VXSGBMConfig.h"
 #include <dynamic_reconfigure/server.h>
 
+#include "gpu_stereo_image_proc/camera_info_conversions.h"
 #include "gpu_stereo_image_proc/msg_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
@@ -82,6 +83,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   boost::mutex connect_mutex_;
   ros::Publisher pub_disparity_, pub_scaled_disparity_, debug_lr_disparity_,
       debug_rl_disparity_;
+  ros::Publisher scaled_left_camera_info_, scaled_right_camera_info_;
 
   // Dynamic reconfigure
   boost::recursive_mutex config_mutex_;
@@ -160,6 +162,11 @@ void VXDisparityNodelet::onInit() {
 
     debug_rl_disparity_ = nh.advertise<DisparityImage>("debug/rl_disparity", 1);
   }
+
+  scaled_left_camera_info_ =
+      nh.advertise<CameraInfo>("left/scaled_camera_info", 1);
+  scaled_right_camera_info_ =
+      nh.advertise<CameraInfo>("right/scaled_camera_info", 1);
 }
 
 // Handles (un)subscribing when clients (un)subscribe
@@ -241,6 +248,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
         border, shrink_scale);
     pub_scaled_disparity_.publish(disp_msg);
   }
+
+  scaled_left_camera_info_.publish(scaleCameraInfo(l_info_msg, shrink_scale));
+  scaled_right_camera_info_.publish(scaleCameraInfo(r_info_msg, shrink_scale));
 
   if (debug_topics_) {
     // This is a copy, so only do it if necessary..
