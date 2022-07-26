@@ -136,15 +136,19 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
     pCudaBilFilter->apply(disparity_map.getGpuMat(), left_map.getGpuMat(),
                           g_filtered_scaled);
 
+    g_filtered_scaled.download(scaled_disparity_);
+
     cv::cuda::resize(g_filtered_scaled, g_filtered, cv::Size(),
                      params_.shrink_scale, params_.shrink_scale);
 
     g_filtered.download(disparity);
 
-  } else if (params_.filtering ==
-             VXStereoMatcherParams::Filtering_WLS_LeftOnly) {
-    ROS_WARN_THROTTLE(1, "Left-only WLS filtering not implemented");
+    // } else if (params_.filtering ==
+    //            VXStereoMatcherParams::Filtering_WLS_LeftOnly) {
+    //   ROS_WARN_THROTTLE(1, "Left-only WLS filtering not implemented");
   } else {
+    scaled_disparity_ = cv::Mat();
+
     // No filtering, just use the scaled disparity
     copy_from_vx_image(disparity_, disparity);
   }

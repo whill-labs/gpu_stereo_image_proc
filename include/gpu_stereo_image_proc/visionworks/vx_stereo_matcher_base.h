@@ -134,7 +134,15 @@ public:
 
   const VXStereoMatcherParams &params() const { return params_; }
 
-  cv::Mat scaledDisparityMat() const {
+  cv::Mat unfilteredDisparityMat() const {
+    cv::Mat output;
+    nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
+                                     VX_MEMORY_TYPE_HOST);
+    map.getMat().copyTo(output);
+    return output;
+  }
+
+  virtual cv::Mat scaledDisparityMat() const {
     cv::Mat output;
     nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
                                      VX_MEMORY_TYPE_HOST);

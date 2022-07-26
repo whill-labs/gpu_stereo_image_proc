@@ -214,109 +214,56 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   if (!stereo_matcher_)
     return;
 
-  // Allocate new disparity image message
-  DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
-  disp_msg->header = l_info_msg->header;
-  disp_msg->image.header = l_info_msg->header;
-
-  // Compute window of (potentially) valid disparities
-
+  // Pull in some parameters as constants
   const int min_disparity = stereo_matcher_->params().min_disparity;
+  const int max_disparity = stereo_matcher_->params().max_disparity;
+  const int shrink_scale = stereo_matcher_->params().shrink_scale;
+
+  const int border = stereo_matcher_->params().sad_win_size / 2;
 
   {
-    int border = stereo_matcher_->params().sad_win_size / 2;
-    int left = stereo_matcher_->params().max_disparity + border - 1;
-    int wtf = (min_disparity >= 0) ? border + min_disparity
-                                   : std::max(border, -min_disparity);
-    int right = disp_msg->image.width - 1 - wtf;
-    int top = border;
-    int bottom = disp_msg->image.height - 1 - border;
-    disp_msg->valid_window.x_offset = left;
-    disp_msg->valid_window.y_offset = top;
-    disp_msg->valid_window.width = right - left;
-    disp_msg->valid_window.height = bottom - top;
-
     // Block matcher produces 16-bit signed (fixed point) disparity image
-    cv::Mat_<int16_t> disparity16;
-    stereo_matcher_->compute(l_image, r_image, disparity16);
+    cv::Mat_<int16_t> disparityS16;
+    stereo_matcher_->compute(l_image, r_image, disparityS16);
 
-    disparityToDisparityImage(disparity16, model_, *disp_msg,
-                              stereo_matcher_->params().min_disparity,
-                              stereo_matcher_->params().max_disparity);
+    DisparityImagePtr disp_msg = disparityToDisparityImage(
+        l_image_msg, disparityS16, model_, min_disparity * shrink_scale,
+        max_disparity * shrink_scale, border * shrink_scale);
 
-    // Adjust for any x-offset between the principal points: d' = d - (cx_l -
-    // cx_r)
-    double cx_l = model_.left().cx();
-    double cx_r = model_.right().cx();
-    if (cx_l != cx_r) {
-      cv::Mat_<float> disp_image(
-          disp_msg->image.height, disp_msg->image.width,
-          reinterpret_cast<float *>(&disp_msg->image.data[0]),
-          disp_msg->image.step);
-      cv::subtract(disp_image, cv::Scalar(cx_l - cx_r), disp_image);
-    }
     pub_disparity_.publish(disp_msg);
   }
 
   {
-    DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
-    disp_msg->header = l_info_msg->header;
-    disp_msg->image.header = l_info_msg->header;
-
-    // Compute window of (potentially) valid disparities
-
-    const int min_disparity = stereo_matcher_->params().min_disparity;
-
-    int border = stereo_matcher_->params().sad_win_size / 2;
-    int left = stereo_matcher_->params().max_disparity + border - 1;
-    int wtf = (min_disparity >= 0) ? border + min_disparity
-                                   : std::max(border, -min_disparity);
-    int right = disp_msg->image.width - 1 - wtf;
-    int top = border;
-    int bottom = disp_msg->image.height - 1 - border;
-    disp_msg->valid_window.x_offset = left;
-    disp_msg->valid_window.y_offset = top;
-    disp_msg->valid_window.width = right - left;
-    disp_msg->valid_window.height = bottom - top;
-
     cv::Mat_<int16_t> scaledDisparityS16 =
         stereo_matcher_->scaledDisparityMat();
-    disparityToDisparityImage(scaledDisparityS16, model_, *disp_msg,
-                              stereo_matcher_->params().min_disparity,
-                              stereo_matcher_->params().max_disparity,
-                              stereo_matcher_->params().shrink_scale);
+    DisparityImagePtr disp_msg = disparityToDisparityImage(
+        l_image_msg, scaledDisparityS16, model_, min_disparity, max_disparity,
+        border, shrink_scale);
     pub_scaled_disparity_.publish(disp_msg);
   }
 
   if (debug_topics_) {
-
-    DisparityImagePtr lr_disp_msg = boost::make_shared<DisparityImage>();
-    lr_disp_msg->header = l_info_msg->header;
-    lr_disp_msg->image.header = l_info_msg->header;
-
     // This is a copy, so only do it if necessary..
-    cv::Mat scaledDisparity = stereo_matcher_->scaledDisparityMat();
-    disparityToDisparityImage(scaledDisparity, model_, *lr_disp_msg,
-                              stereo_matcher_->params().min_disparity,
-                              stereo_matcher_->params().max_disparity,
-                              stereo_matcher_->params().shrink_scale);
-    debug_lr_disparity_.publish(lr_disp_msg);
+    cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
+    if (!scaledDisparity.empty()) {
+      DisparityImagePtr lr_disp_msg = disparityToDisparityImage(
+          l_image_msg, scaledDisparity, model_, min_disparity, max_disparity,
+          border, shrink_scale);
+      debug_lr_disparity_.publish(lr_disp_msg);
+    }
 
     if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
             std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
                 stereo_matcher_)) {
 
-      DisparityImagePtr rl_disp_msg = boost::make_shared<DisparityImage>();
-      rl_disp_msg->header = l_info_msg->header;
-      rl_disp_msg->image.header = l_info_msg->header;
-
       // This is a copy, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->scaledRLDisparityMat();
-      disparityToDisparityImage(rlScaledDisparity, model_, *rl_disp_msg,
-                                stereo_matcher_->params().min_disparity,
-                                stereo_matcher_->params().max_disparity,
-                                stereo_matcher_->params().shrink_scale);
-      debug_rl_disparity_.publish(rl_disp_msg);
+      if (!rlScaledDisparity.empty()) {
+        DisparityImagePtr rl_disp_msg = disparityToDisparityImage(
+            l_image_msg, rlScaledDisparity, model_, min_disparity,
+            max_disparity, border, shrink_scale);
+        debug_rl_disparity_.publish(rl_disp_msg);
+      }
     }
   }
 } // namespace gpu_stereo_image_proc
@@ -361,9 +308,9 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   if (config.disparity_filter == VXSGBM_BilateralFilter) {
     ROS_INFO("Enabling bilateral filtering");
     params_.filtering = VXStereoMatcherParams::Filtering_Bilateral;
-  } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftOnly) {
-    ROS_INFO("Enabling Left-only WLS filtering");
-    params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftOnly;
+    // } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftOnly) {
+    //   ROS_INFO("Enabling Left-only WLS filtering");
+    //   params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftOnly;
   } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftRight) {
     ROS_INFO("Enabling Left-Right WLS filtering");
     params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftRight;

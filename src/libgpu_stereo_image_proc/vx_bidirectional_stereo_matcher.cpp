@@ -216,15 +216,16 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
     cv ::Ptr<cv::ximgproc::DisparityWLSFilter> wls =
         cv::ximgproc::createDisparityWLSFilter(sgbm);
 
-    cv::Mat filter_output;
-    // Supply out own ROI otherwise it drops half of the image
+    // Supply our own ROI otherwise it drops half of the image
     const cv::Rect roi(0, 0, left_map.getMat().cols, left_map.getMat().rows);
-    wls->filter(lr_disparity_map.getMat(), left_map.getMat(), filter_output,
+    wls->filter(lr_disparity_map.getMat(), left_map.getMat(), filter_output_,
                 rl_disparity, roi, right_map.getMat());
+
+    scaled_confidence_ = wls->getConfidenceMap();
 
     // And scale back up
     cv::Mat scaled_output;
-    cv::resize(filter_output, scaled_output, cv::Size(), params_.shrink_scale,
+    cv::resize(filter_output_, scaled_output, cv::Size(), params_.shrink_scale,
                params_.shrink_scale, cv::INTER_NEAREST);
 
     disparity.assign(scaled_output * params_.shrink_scale);
