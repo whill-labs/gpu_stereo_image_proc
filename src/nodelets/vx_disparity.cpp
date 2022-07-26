@@ -80,7 +80,8 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   // Publications
   boost::mutex connect_mutex_;
-  ros::Publisher pub_disparity_, debug_lr_disparity_, debug_rl_disparity_;
+  ros::Publisher pub_disparity_, pub_scaled_disparity_, debug_lr_disparity_,
+      debug_rl_disparity_;
 
   // Dynamic reconfigure
   boost::recursive_mutex config_mutex_;
@@ -149,6 +150,9 @@ void VXDisparityNodelet::onInit() {
   pub_disparity_ =
       nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
 
+  pub_scaled_disparity_ = nh.advertise<DisparityImage>("scaled_disparity", 1,
+                                                       connect_cb, connect_cb);
+
   private_nh.param("debug", debug_topics_, false);
   if (debug_topics_) {
     ROS_INFO("Publishing debug topics");
@@ -161,7 +165,8 @@ void VXDisparityNodelet::onInit() {
 // Handles (un)subscribing when clients (un)subscribe
 void VXDisparityNodelet::connectCb() {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
-  if (pub_disparity_.getNumSubscribers() == 0) {
+  if ((pub_disparity_.getNumSubscribers() == 0) &&
+      (pub_scaled_disparity_q.getNumSubscribers() == 0)) {
     sub_l_image_.unsubscribe();
     sub_l_info_.unsubscribe();
     sub_r_image_.unsubscribe();
@@ -249,8 +254,14 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
         disp_msg->image.step);
     cv::subtract(disp_image, cv::Scalar(cx_l - cx_r), disp_image);
   }
-
   pub_disparity_.publish(disp_msg);
+
+  cv::Mat_<int16_t> scaledDisparityS16 = stereo_matcher_->scaledDisparityMat();
+  disparityToDisparityImage(disparity16, model_, *disp_msg,
+                            stereo_matcher_->params().min_disparity,
+                            stereo_matcher_->params().max_disparity,
+                            stereo_matcher_->params().shrink_scale);
+  pub_scaled_disparity_.publish(disp_msg);
 
   if (debug_topics_) {
 
