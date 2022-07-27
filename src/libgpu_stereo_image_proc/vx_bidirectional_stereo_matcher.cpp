@@ -217,7 +217,9 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
         cv::ximgproc::createDisparityWLSFilter(sgbm);
 
     // Supply our own ROI otherwise it drops half of the image
-    const cv::Rect roi(0, 0, left_map.getMat().cols, left_map.getMat().rows);
+    const int border = params_.max_disparity;
+    const cv::Rect roi(border, 0, left_map.getMat().cols - 2 * border,
+                       left_map.getMat().rows);
     wls->filter(lr_disparity_map.getMat(), left_map.getMat(), filter_output_,
                 rl_disparity, roi, right_map.getMat());
 
