@@ -1,8 +1,15 @@
-# gpu_stereo_image_proc [![CircleCI](https://circleci.com/gh/WHILL/gpu_stereo_image_proc.svg?style=svg&circle-token=95d28a14b516f20bef6e607e2c88d5a3f3bd92fe)](https://circleci.com/gh/WHILL/gpu_stereo_image_proc)
+# gpu_stereo_image_proc 
 
 ## Overview
 
-This package provides ROS wrapper for CUDA implementations of Semi-Global (Block) Matching (i.e. SGM or SGBM). This package currently supports [Fixstars libSGM](https://github.com/fixstars/libSGM) and [NVIDIA VisionWorks](https://developer.nvidia.com/embedded/visionworks) as stereo-matching engine.
+This package provides ROS wrapper for two CUDA implementations of Semi-Global (Block) Matching (i.e. SGM or SGBM):
+
+* [NVIDIA VisionWorks](https://developer.nvidia.com/embedded/visionworks), and
+* [Fixstars libSGM](https://github.com/fixstars/libSGM)
+
+It has diverged significantly from [whill-lab's](https://github.com/whill-labs) [upstream package](https://github.com/whill-labs/gpu_stereo_image_proc).
+
+As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x.   It also assumes our [OpenCV](https://gitlab.com/apl-ocean-engineering/jetson/buildopencv) and [ROS](https://gitlab.com/apl-ocean-engineering/jetson/buildros1) builds.
 
 ## Requirement
 
@@ -20,15 +27,8 @@ Only "Build from Source" option is provided. Simply pull the source and build th
 cd <path-to-your-catkin-workspace>/src
 git clone https://github.com/WHILL/gpu_stereo_image_proc.git
 cd ..
-catkin_make
-# Note: libSGM is automatically pulled to gpu_stereo_image_proc/libSGM as CMake's external project.
-```
-
-If you want to build this package on a machine which does not have any GPU, CMake would not be able to detect CUDA architecture and build may fail. In this case, you can specify CUDA architecture by providing build options.
-
-```sh
-catkin_make -DAUTO_DETECT_ARCH=OFF -DCUDA_ARCH="<your-selection>"
-# e.g. -DCUDA_ARCH="-arch=sm_72" for Jetson Xavier
+catkin build
+# Note: libSGM is automatically pulled to gpu_stereo_image_proc/libSGM as an external project in CMakeLists
 ```
 
 ## Usage
@@ -39,15 +39,10 @@ Basic usage of this package (e.g. subscribed/published topics, node structure) i
 
 ### Nodelets
 
-This package contains nodelets for creating disparity images from stereo.
+This package contains nodelets for creating disparity images from stereo:
 
-#### gpu_stereo_image_proc/libsgm_disparity
-
-Nodelet which wraps Fixstars libSGM.
-
-#### gpu_stereo_image_proc/vx_disparity
-
-Nodelet which wraps NVIDIA VisionWorks.
+* `gpu_stereo_image_proc/libsgm_disparity`:  Nodelet which wraps Fixstars libSGM.
+* `gpu_stereo_image_proc/vx_disparity`:  Nodelet which wraps NVIDIA VisionWorks.
 
 ### Parameters
 
@@ -56,28 +51,12 @@ Most of the parameters can be configured via [dynamic reconfigure](http://wiki.r
 - [Parameter (libSGM)](https://github.com/WHILL/gpu_stereo_image_proc/wiki/Parameter-(libSGM))
 - [Parameter (VisionWorks)](https://github.com/WHILL/gpu_stereo_image_proc/wiki/Parameter-(VisionWorks))
 
-### Example: Compare disparity calculation results
-
-This package provides an example launch file which enables you to see difference of three stereo-mathing implementations: OpenCV (CPU), libSGM (GPU) and VisionWorks (GPU).
-
-```sh
-# Launch your stereo camera
-# Launch your nodelet manager
-rosrun nodelet nodelet manager __name:=manager # Note that manager must be located in global namespace
-
-# Launch image processing nodelets
-roslaunch gpu_stereo_image_proc comparison.launch manager:=/manager __ns:=<namespace-of-your-camera> # Don't forget '/' before manager's name.
-```
-
-Note: `disparity` and `points2` topics are remapped with `libsgm_` prefix (libSGM) and `vx_` prefix (VisionWorks).
-
-### Demo Video
-
-See https://youtu.be/whCAjrDg9_A
-
 ## Licenses
 
-- This package is distributed under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
-- The underlying code of this package is forked from [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc) which is distibuted under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
-- This package includes [libSGM](https://github.com/fixstars/libSGM) which is distributed under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
-- This package depends on [VisionWorks](https://developer.nvidia.com/embedded/visionworks) which NVIDIA reserves all the copyrights of.
+This software maintain's the upstream package's [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
+
+The underlying code of this package is forked from [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc) which is distibuted under the [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
+
+This package includes [libSGM](https://github.com/fixstars/libSGM) which is distributed under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+This package depends on [VisionWorks](https://developer.nvidia.com/embedded/visionworks) which NVIDIA reserves all the copyrights of.
