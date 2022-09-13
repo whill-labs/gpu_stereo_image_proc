@@ -25,7 +25,7 @@ catkin_package(
 
 include_directories(include)
 
-find_package(OpenCV 4 REQUIRED)
+find_package(OpenCV 4 REQUIRED) 
 include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 find_package(VisionWorks REQUIRED)
 include_directories(${VisionWorks_INCLUDE_DIRS})
@@ -66,9 +66,12 @@ add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 # Nodelet library
 set(VX_NODELET_NAME vx_stereo_image_proc)
 add_library(${VX_NODELET_NAME}
+            src/libgpu_stereo_image_proc/vx_stereo_matcher_base.cpp
             src/libgpu_stereo_image_proc/vx_stereo_matcher.cpp
-            src/libgpu_stereo_image_proc/vx_sgbm_processor.cpp 
-            src/libgpu_stereo_image_proc/sgbm_processor.cpp 
+            src/libgpu_stereo_image_proc/vx_bidirectional_stereo_matcher.cpp
+            src/libgpu_stereo_image_proc/vx_conversions.cpp
+            src/libgpu_stereo_image_proc/msg_conversions.cpp
+            src/libgpu_stereo_image_proc/camera_info_conversions.cpp
             src/nodelets/vx_disparity.cpp)
 target_link_libraries(${VX_NODELET_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}

@@ -35,42 +35,47 @@
 #include <ros/assert.h>
 #include <sensor_msgs/image_encodings.h>
 
-namespace gpu_stereo_image_proc
-{
-void LibSGMStereoSGBMProcessor::processDisparity(const cv::Mat& left_rect, const cv::Mat& right_rect,
-                                                 const image_geometry::StereoCameraModel& model,
-                                                 stereo_msgs::DisparityImage&             disparity) const
-{
-  // Fixed-point disparity is 16 times the true value: d = d_fp / 16.0 = x_l - x_r.
-  static const int    DPP     = 16;  // disparities per pixel
-  static const double inv_dpp = 1.0 / DPP;
+namespace gpu_stereo_image_proc {
+cv::Mat_<int16_t> LibSGMStereoSGBMProcessor::processDisparity(
+    const cv::Mat &left_rect, const cv::Mat &right_rect,
+    const image_geometry::StereoCameraModel &model) const {
+  // Fixed-point disparity is 16 times the true value: d = d_fp / 16.0 = x_l -
+  // x_r.
+  // static const int DPP = 16; // disparities per pixel
+  // static const double inv_dpp = 1.0 / DPP;
+
+  cv::Mat_<int16_t> disparity16;
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
-  stereo_matcher_->execute(left_rect, right_rect, disparity16_);
+  stereo_matcher_->execute(left_rect, right_rect, disparity16);
 
-  // Fill in DisparityImage image data, converting to 32-bit float
-  sensor_msgs::Image& dimage = disparity.image;
-  dimage.height              = disparity16_.rows;
-  dimage.width               = disparity16_.cols;
-  dimage.encoding            = sensor_msgs::image_encodings::TYPE_32FC1;
-  dimage.step                = dimage.width * sizeof(float);
-  dimage.data.resize(dimage.step * dimage.height);
-  cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
-  // We convert from fixed-point to float disparity and also adjust for any x-offset between
-  // the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
-  disparity16_.convertTo(dmat, dmat.type(), inv_dpp, -(model.left().cx() - model.right().cx()));
-  ROS_ASSERT(dmat.data == &dimage.data[0]);
-  /// @todo is_bigendian? :)
+  return disparity16;
 
-  // Stereo parameters
-  disparity.f = model.right().fx();
-  disparity.T = model.baseline();
+  // // Fill in DisparityImage image data, converting to 32-bit float
+  // sensor_msgs::Image& dimage = disparity.image;
+  // dimage.height              = disparity16_.rows;
+  // dimage.width               = disparity16_.cols;
+  // dimage.encoding            = sensor_msgs::image_encodings::TYPE_32FC1;
+  // dimage.step                = dimage.width * sizeof(float);
+  // dimage.data.resize(dimage.step * dimage.height);
+  // cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0],
+  // dimage.step);
+  // // We convert from fixed-point to float disparity and also adjust for any
+  // x-offset between
+  // // the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
+  // disparity16_.convertTo(dmat, dmat.type(), inv_dpp, -(model.left().cx() -
+  // model.right().cx())); ROS_ASSERT(dmat.data == &dimage.data[0]);
+  // /// @todo is_bigendian? :)
 
-  /// @todo Window of (potentially) valid disparities
+  // // Stereo parameters
+  // disparity.f = model.right().fx();
+  // disparity.T = model.baseline();
 
-  // Disparity search range
-  disparity.min_disparity = getMinDisparity();
-  disparity.max_disparity = getMinDisparity() + getDisparityRange() - 1;
-  disparity.delta_d       = inv_dpp;
+  // /// @todo Window of (potentially) valid disparities
+
+  // // Disparity search range
+  // disparity.min_disparity = getMinDisparity();
+  // disparity.max_disparity = getMinDisparity() + getDisparityRange() - 1;
+  // disparity.delta_d       = inv_dpp;
 }
-}  // namespace gpu_stereo_image_proc
+} // namespace gpu_stereo_image_proc
