@@ -52,6 +52,8 @@
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
+#include "gpu_stereo_image_proc/DisparityBilateralFilterConfig.h"
+#include "gpu_stereo_image_proc/DisparityWLSFilterConfig.h"
 #include "gpu_stereo_image_proc/VXSGBMConfig.h"
 #include <dynamic_reconfigure/server.h>
 
@@ -92,6 +94,15 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   typedef dynamic_reconfigure::Server<Config> ReconfigureServer;
   boost::shared_ptr<ReconfigureServer> reconfigure_server_;
 
+  typedef gpu_stereo_image_proc::DisparityBilateralFilterConfig
+      BilateralFilterConfig;
+  boost::shared_ptr<dynamic_reconfigure::Server<BilateralFilterConfig>>
+      dyncfg_bilateral_filter_;
+
+  typedef gpu_stereo_image_proc::DisparityWLSFilterConfig WLSFilterConfig;
+  boost::shared_ptr<dynamic_reconfigure::Server<WLSFilterConfig>>
+      dyncfg_wls_filter_;
+
   // Processing state (note: only safe because we're single-threaded!)
   image_geometry::StereoCameraModel model_;
 
@@ -109,6 +120,9 @@ class VXDisparityNodelet : public nodelet::Nodelet {
                const CameraInfoConstPtr &r_info_msg);
 
   void configCb(Config &config, uint32_t level);
+
+  void bilateralConfigCb(BilateralFilterConfig &config, uint32_t level);
+  void wlsConfigCb(WLSFilterConfig &config, uint32_t level);
 
   bool update_stereo_matcher();
 };
@@ -357,6 +371,25 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   params_.shrink_scale = config.shrink_scale;
 
   update_stereo_matcher();
+}
+
+void VXDisparityNodelet::bilateralConfigCb(BilateralFilterConfig &config,
+                                           uint32_t level) {
+  ;
+}
+
+void VXDisparityNodelet::wlsConfigCb(WLSFilterConfig &config, uint32_t level) {
+  params_.wls_filter_params.lambda = config.lambda;
+  params_.wls_filter_params.lrc_threshold = config.lrc_threshold;
+
+  // And update the actual matcher if required
+  if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
+          std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
+              stereo_matcher_)) {
+
+    bm->setLambda(config.lambda);
+    bm->setLRCThreshold(config.lrc_threshold);
+  }
 }
 
 bool VXDisparityNodelet::update_stereo_matcher() {

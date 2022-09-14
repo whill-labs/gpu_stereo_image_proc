@@ -16,7 +16,8 @@ endif()
 generate_dynamic_reconfigure_options(
   cfg/VXSGBM.cfg
   cfg/LIBSGM.cfg
-  cfg/DisparityWLSFilter.cfg)
+  cfg/DisparityWLSFilter.cfg
+  cfg/DisparityBilateralFilter.cfg )
 
 catkin_package(
   CATKIN_DEPENDS image_geometry image_proc sensor_msgs stereo_msgs

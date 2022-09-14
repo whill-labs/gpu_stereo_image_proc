@@ -68,6 +68,17 @@ public:
 
   DisparityFiltering_t filtering;
 
+  struct BilateralFilterParams {
+    ;
+  } bilateral_filter_params;
+
+  struct WLSFilterParams {
+    WLSFilterParams() : lambda(0), lrc_threshold(24) { ; }
+
+    double lambda;
+    int lrc_threshold;
+  } wls_filter_params;
+
   void dump() const {
     ROS_INFO("===================================");
     ROS_INFO("image_size  : w %d, h %d", image_size.width, image_size.height);

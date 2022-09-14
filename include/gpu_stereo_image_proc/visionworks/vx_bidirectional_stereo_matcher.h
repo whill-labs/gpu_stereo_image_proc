@@ -51,8 +51,12 @@ public:
   ~VXBidirectionalStereoMatcher();
 
   // Set parameters for the WLSDisparityFilter
-  void setLambda (double _lambda);
-  void setLRCthresh (int _LRC_thresh);
+  // This is a little icky, they're just a thin wrapper around setters for
+  // _params.wls_filter_params
+  //
+  // \todo Improve this
+  void setLambda(double _lambda);
+  void setLRCThreshold(int _LRC_thresh);
 
   void compute(cv::InputArray left, cv::InputArray right,
                cv::OutputArray disparity) override;
