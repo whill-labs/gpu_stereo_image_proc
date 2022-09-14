@@ -174,6 +174,16 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
 
 VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
 
+
+void VXBidirectionalStereoMatcher::setLambda (double _lambda) {
+    _wls_params.lambda = _lambda;
+}
+
+void VXBidirectionalStereoMatcher::setLRCthresh (int _LRC_thresh) {
+_wls_params.lrc_threshold = _LRC_thresh;
+}
+
+
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                                            cv::InputArray right,
                                            cv::OutputArray disparity) {
@@ -215,6 +225,8 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
         params_.sad_win_size);
     cv ::Ptr<cv::ximgproc::DisparityWLSFilter> wls =
         cv::ximgproc::createDisparityWLSFilter(sgbm);
+    wls->setLambda( _wls_params.lambda );
+    wls->setLRCthresh( _wls_params.lrc_threshold);
 
     // Supply our own ROI otherwise it drops half of the image
     const int border = params_.max_disparity;
