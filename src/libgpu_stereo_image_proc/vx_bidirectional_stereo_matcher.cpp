@@ -174,14 +174,6 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
 
 VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
 
-void VXBidirectionalStereoMatcher::setLambda(double _lambda) {
-  params_.wls_filter_params.lambda = _lambda;
-}
-
-void VXBidirectionalStereoMatcher::setLRCThreshold(int _LRC_thresh) {
-  params_.wls_filter_params.lrc_threshold = _LRC_thresh;
-}
-
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                                            cv::InputArray right,
                                            cv::OutputArray disparity) {

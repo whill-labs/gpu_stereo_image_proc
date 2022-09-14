@@ -375,21 +375,31 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
 
 void VXDisparityNodelet::bilateralConfigCb(BilateralFilterConfig &config,
                                            uint32_t level) {
-  ;
+
+  params_.bilateral_filter_params.sigma_range = config.sigma_range;
+  params_.bilateral_filter_params.radius = config.radius;
+  params_.bilateral_filter_params.num_iters = config.num_iters;
+  params_.bilateral_filter_params.max_disc_threshold =
+      config.max_disc_threshold;
+  params_.bilateral_filter_params.edge_threshold = config.edge_threshold;
+
+  update_stereo_matcher();
 }
 
 void VXDisparityNodelet::wlsConfigCb(WLSFilterConfig &config, uint32_t level) {
   params_.wls_filter_params.lambda = config.lambda;
   params_.wls_filter_params.lrc_threshold = config.lrc_threshold;
 
-  // And update the actual matcher if required
-  if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
-          std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
-              stereo_matcher_)) {
+  update_stereo_matcher();
 
-    bm->setLambda(config.lambda);
-    bm->setLRCThreshold(config.lrc_threshold);
-  }
+  // And update the actual matcher if required
+  // if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
+  //         std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
+  //             stereo_matcher_)) {
+
+  //   bm->setLambda(config.lambda);
+  //   bm->setLRCThreshold(config.lrc_threshold);
+  // }
 }
 
 bool VXDisparityNodelet::update_stereo_matcher() {
