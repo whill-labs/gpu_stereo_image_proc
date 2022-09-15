@@ -1,5 +1,5 @@
 <package>
-  <name>gpu_stereo_image_proc</name>
+  <name>gpu_stereo_image_proc_common</name>
   <version>1.0.0</version>
   <description>Stereo disparity processing by using NVIDIA VisionWorks and Fixstars libSGM.</description>
   <author>Seiya Shimizu</author>
@@ -9,7 +9,6 @@
 
   <export>
     <rosdoc config="rosdoc.yaml" />
-    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
   </export>
 
   <buildtool_depend>catkin</buildtool_depend>

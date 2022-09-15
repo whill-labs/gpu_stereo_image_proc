@@ -52,7 +52,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
-#include "gpu_stereo_image_proc/VXSGBMConfig.h"
+#include "gpu_stereo_image_proc_visionworks/VXSGBMConfig.h"
 #include <dynamic_reconfigure/server.h>
 
 #include "gpu_stereo_image_proc/camera_info_conversions.h"

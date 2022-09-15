@@ -31,7 +31,7 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include "gpu_stereo_image_proc/libsgm_sgbm_processor.h"
+#include "gpu_stereo_image_proc/libsgm/libsgm_sgbm_processor.h"
 #include <ros/assert.h>
 #include <sensor_msgs/image_encodings.h>
 

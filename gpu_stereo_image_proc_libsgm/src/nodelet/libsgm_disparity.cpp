@@ -52,10 +52,10 @@
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
-#include "gpu_stereo_image_proc/LIBSGMConfig.h"
+#include "gpu_stereo_image_proc_libsgm/LIBSGMConfig.h"
 #include <dynamic_reconfigure/server.h>
 
-#include "gpu_stereo_image_proc/libsgm_sgbm_processor.h"
+#include "gpu_stereo_image_proc/libsgm/libsgm_sgbm_processor.h"
 
 namespace gpu_stereo_image_proc {
 using namespace sensor_msgs;
