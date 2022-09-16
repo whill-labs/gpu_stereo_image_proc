@@ -82,8 +82,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   // Publications
   boost::mutex connect_mutex_;
-  ros::Publisher pub_disparity_, debug_lr_disparity_,
-      debug_rl_disparity_;
+  ros::Publisher pub_disparity_, debug_lr_disparity_, debug_rl_disparity_;
   ros::Publisher scaled_left_camera_info_, scaled_right_camera_info_;
   ros::Publisher scaled_left_rect_;
 
@@ -155,7 +154,8 @@ void VXDisparityNodelet::onInit() {
       nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
 
   // pub_scaled_disparity_ = nh.advertise<DisparityImage>("scaled_disparity", 1,
-  //                                                      connect_cb, connect_cb);
+  //                                                      connect_cb,
+  //                                                      connect_cb);
 
   private_nh.param("debug", debug_topics_, false);
   if (debug_topics_) {
@@ -183,6 +183,8 @@ void VXDisparityNodelet::connectCb() {
     sub_r_info_.unsubscribe();
   } else if (!sub_l_image_.getSubscriber()) {
     ros::NodeHandle &nh = getNodeHandle();
+    ROS_DEBUG("Client connecting, subscribing to images...");
+
     // Queue size 1 should be OK; the one that matters is the synchronizer queue
     // size.
     /// @todo Allow remapping left, right?
@@ -199,7 +201,6 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
                                  const CameraInfoConstPtr &l_info_msg,
                                  const ImageConstPtr &r_image_msg,
                                  const CameraInfoConstPtr &r_info_msg) {
-
   // Update the camera model
   model_.fromCameraInfo(l_info_msg, r_info_msg);
 
@@ -211,7 +212,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)
           ->image;
 
-  params_.set_image_size( cv::Size(l_image.cols, l_image.rows) );
+  params_.set_image_size(cv::Size(l_image.cols, l_image.rows));
   if (stereo_matcher_) {
     const cv::Size image_size = stereo_matcher_->params().image_size();
     if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
@@ -239,9 +240,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     // Block matcher produces 16-bit signed (fixed point) disparity image
     cv::Mat_<int16_t> disparityS16;
     stereo_matcher_->compute(l_image, r_image, disparityS16);
-    DisparityImagePtr disp_msg = disparityToDisparityImage(
-        l_image_msg, disparityS16, scaled_model_, min_disparity, max_disparity,
-        border);
+    DisparityImagePtr disp_msg =
+        disparityToDisparityImage(l_image_msg, disparityS16, scaled_model_,
+                                  min_disparity, max_disparity, border);
     pub_disparity_.publish(disp_msg);
   }
 
@@ -268,7 +269,8 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     }
 
     if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
-            std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(stereo_matcher_)) {
+            std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
+                stereo_matcher_)) {
 
       // This is a copy, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
@@ -354,10 +356,11 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
 }
 
 bool VXDisparityNodelet::update_stereo_matcher() {
+  // \todo For safety, should mutex this and imageCb
   ROS_WARN("Updating stereo_matcher");
 
   if (!params_.valid()) {
-    ROS_WARN("No valid stereo matcher...");
+    ROS_WARN("Stereo matcher params are not valid...");
     return false;
   }
 
