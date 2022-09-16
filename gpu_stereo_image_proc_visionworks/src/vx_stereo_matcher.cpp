@@ -47,21 +47,16 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
     : VXStereoMatcherBase(params) {
   vx_status status;
 
-  if (params.shrink_scale > 1) {
-    left_scaled_ = vxCreateImage(
-        context_, params.image_size.width / params.shrink_scale,
-        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_U8);
+  if (params.downsample > 1) {
+    left_scaled_ = vxCreateImage( context_,
+        params.scaled_image_size().width, params.scaled_image_size().height,
+        VX_DF_IMAGE_U8);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
 
-    right_scaled_ = vxCreateImage(
-        context_, params.image_size.width / params.shrink_scale,
-        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_U8);
+    right_scaled_ = vxCreateImage(context_,
+        params.scaled_image_size().width, params.scaled_image_size().height,
+        VX_DF_IMAGE_U8);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
-
-    disparity_scaled_ = vxCreateImage(
-        context_, params.image_size.width / params.shrink_scale,
-        params.image_size.height / params.shrink_scale, VX_DF_IMAGE_S16);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_scaled_));
 
     vx_node left_scale_node = vxScaleImageNode(
         graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
@@ -71,23 +66,15 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
     vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_scaled_, right_scaled_, disparity_scaled_,
+        graph_, left_scaled_, right_scaled_, disparity_,
         params.min_disparity, params.max_disparity, params.P1, params.P2,
         params.sad_win_size, params.ct_win_size, params.hc_win_size,
         params.clip, params.max_diff, params.uniqueness_ratio,
         params.scanline_mask, params.flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    vx_node disparity_scale_node = vxScaleImageNode(
-        graph_, disparity_scaled_, disparity_,
-        VX_INTERPOLATION_NEAREST_NEIGHBOR); // Scale up disparities using
-                                            // nearest neighbor to avoid
-                                            // interpolation effects
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
     vxReleaseNode(&left_scale_node);
     vxReleaseNode(&right_scale_node);
-    vxReleaseNode(&disparity_scale_node);
     vxReleaseNode(&sgm_node);
   } else {
     ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, "
@@ -118,15 +105,13 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
   ROS_ASSERT(status == VX_SUCCESS);
 
   if (params_.filtering == VXStereoMatcherParams::Filtering_Bilateral) {
-    // Do Bilateral filtering on the **scaled** disparity
     const int nDisp = (params_.max_disparity - params_.min_disparity);
     const int radius = 3;
     const int iters = 1;
 
-    cv::cuda::GpuMat g_filtered_scaled, g_filtered;
+    cv::cuda::GpuMat g_filtered;
 
-    nvx_cv::VXImageToCVMatMapper disparity_map(
-        disparity_scaled_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
+    nvx_cv::VXImageToCVMatMapper disparity_map(disparity_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
     nvx_cv::VXImageToCVMatMapper left_map(left_scaled_, 0, NULL, VX_READ_ONLY,
                                           NVX_MEMORY_TYPE_CUDA);
 
@@ -134,26 +119,10 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
         cv::cuda::createDisparityBilateralFilter(nDisp, radius, iters);
 
     pCudaBilFilter->apply(disparity_map.getGpuMat(), left_map.getGpuMat(),
-                          g_filtered_scaled);
-
-    g_filtered_scaled.download(scaled_disparity_);
-
-    cv::cuda::resize(g_filtered_scaled, g_filtered, cv::Size(),
-                     params_.shrink_scale, params_.shrink_scale);
-
+                          g_filtered);
     g_filtered.download(disparity);
-
-    // } else if (params_.filtering ==
-    //            VXStereoMatcherParams::Filtering_WLS_LeftOnly) {
-    //   ROS_WARN_THROTTLE(1, "Left-only WLS filtering not implemented");
   } else {
-    scaled_disparity_ = cv::Mat();
-
     // No filtering, just use the scaled disparity
     copy_from_vx_image(disparity_, disparity);
   }
-
-  // scale disparities up to full-sized image disparities
-  // n.b. this could be done in VXworks (?) but I can't figure out how...
-  disparity.assign(disparity.getMat() * params_.shrink_scale);
 }

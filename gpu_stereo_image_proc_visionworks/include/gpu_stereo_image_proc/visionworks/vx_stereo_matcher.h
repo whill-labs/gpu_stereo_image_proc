@@ -46,29 +46,14 @@
 class VXStereoMatcher : public VXStereoMatcherBase {
 public:
   VXStereoMatcher();
-
   VXStereoMatcher(const VXStereoMatcherParams &params);
 
-  // VXStereoMatcher(VXStereoMatcher &&obj);
-
   virtual ~VXStereoMatcher();
-
-  // VXStereoMatcher &operator=(VXStereoMatcher &&obj);
 
   void compute(cv::InputArray left, cv::InputArray right,
                cv::OutputArray disparity) override;
 
-  cv::Mat scaledDisparityMat() const override {
-
-    if (scaled_disparity_.empty())
-      return unfilteredDisparityMat();
-
-    return scaled_disparity_;
-  }
-
 protected:
-  cv::Mat scaled_disparity_;
-
   // noncopyable
   VXStereoMatcher(const VXStereoMatcher &) = delete;
   VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;

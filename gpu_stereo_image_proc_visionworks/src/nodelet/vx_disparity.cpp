@@ -35,6 +35,7 @@
 #if ((BOOST_VERSION / 100) % 1000) >= 53
 #include <boost/thread/lock_guard.hpp>
 #endif
+
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 #include <memory>
@@ -81,7 +82,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   // Publications
   boost::mutex connect_mutex_;
-  ros::Publisher pub_disparity_, pub_scaled_disparity_, debug_lr_disparity_,
+  ros::Publisher pub_disparity_, debug_lr_disparity_,
       debug_rl_disparity_;
   ros::Publisher scaled_left_camera_info_, scaled_right_camera_info_;
   ros::Publisher scaled_left_rect_;
@@ -153,8 +154,8 @@ void VXDisparityNodelet::onInit() {
   pub_disparity_ =
       nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
 
-  pub_scaled_disparity_ = nh.advertise<DisparityImage>("scaled_disparity", 1,
-                                                       connect_cb, connect_cb);
+  // pub_scaled_disparity_ = nh.advertise<DisparityImage>("scaled_disparity", 1,
+  //                                                      connect_cb, connect_cb);
 
   private_nh.param("debug", debug_topics_, false);
   if (debug_topics_) {
@@ -168,14 +169,14 @@ void VXDisparityNodelet::onInit() {
       nh.advertise<CameraInfo>("left/scaled_camera_info", 1);
   scaled_right_camera_info_ =
       nh.advertise<CameraInfo>("right/scaled_camera_info", 1);
+
   scaled_left_rect_ = nh.advertise<Image>("left/scaled_image_rect", 1);
 }
 
 // Handles (un)subscribing when clients (un)subscribe
 void VXDisparityNodelet::connectCb() {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
-  if ((pub_disparity_.getNumSubscribers() == 0) &&
-      (pub_scaled_disparity_.getNumSubscribers() == 0)) {
+  if (pub_disparity_.getNumSubscribers() == 0) {
     sub_l_image_.unsubscribe();
     sub_l_info_.unsubscribe();
     sub_r_image_.unsubscribe();
@@ -210,9 +211,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)
           ->image;
 
-  params_.image_size = cv::Size(l_image.cols, l_image.rows);
+  params_.set_image_size( cv::Size(l_image.cols, l_image.rows) );
   if (stereo_matcher_) {
-    const cv::Size image_size = stereo_matcher_->params().image_size;
+    const cv::Size image_size = stereo_matcher_->params().image_size();
     if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
       update_stereo_matcher();
     }
@@ -226,38 +227,32 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   // Pull in some parameters as constants
   const int min_disparity = stereo_matcher_->params().min_disparity;
   const int max_disparity = stereo_matcher_->params().max_disparity;
-  const int shrink_scale = stereo_matcher_->params().shrink_scale;
-
+  const int downsample = stereo_matcher_->params().downsample;
   const int border = stereo_matcher_->params().sad_win_size / 2;
+
+  const auto scaled_camera_info_l(scaleCameraInfo(l_info_msg, downsample));
+  const auto scaled_camera_info_r(scaleCameraInfo(r_info_msg, downsample));
+  image_geometry::StereoCameraModel scaled_model_;
+  scaled_model_.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   {
     // Block matcher produces 16-bit signed (fixed point) disparity image
     cv::Mat_<int16_t> disparityS16;
     stereo_matcher_->compute(l_image, r_image, disparityS16);
-
     DisparityImagePtr disp_msg = disparityToDisparityImage(
-        l_image_msg, disparityS16, model_, min_disparity * shrink_scale,
-        max_disparity * shrink_scale, border * shrink_scale);
-
+        l_image_msg, disparityS16, scaled_model_, min_disparity, max_disparity,
+        border);
     pub_disparity_.publish(disp_msg);
   }
 
-  {
-    cv::Mat_<int16_t> scaledDisparityS16 =
-        stereo_matcher_->scaledDisparityMat();
-    DisparityImagePtr disp_msg = disparityToDisparityImage(
-        l_image_msg, scaledDisparityS16, model_, min_disparity, max_disparity,
-        border, shrink_scale);
-    pub_scaled_disparity_.publish(disp_msg);
-  }
-
-  scaled_left_camera_info_.publish(scaleCameraInfo(l_info_msg, shrink_scale));
-  scaled_right_camera_info_.publish(scaleCameraInfo(r_info_msg, shrink_scale));
+  scaled_left_camera_info_.publish(scaled_camera_info_l);
+  scaled_right_camera_info_.publish(scaled_camera_info_r);
 
   // Mildly inefficient but good enough...
+  // I need a scaled rectified image for point cloud coloring
   cv::Mat scaledLeftRect;
-  cv::resize(l_image, scaledLeftRect, cv::Size(), 1.0 / shrink_scale,
-             1.0 / shrink_scale);
+  cv::resize(l_image, scaledLeftRect, cv::Size(), 1.0 / downsample,
+             1.0 / downsample);
   cv_bridge::CvImage left_rect_msg_bridge(l_image_msg->header, "mono8",
                                           scaledLeftRect);
   scaled_left_rect_.publish(left_rect_msg_bridge.toImageMsg());
@@ -268,20 +263,19 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     if (!scaledDisparity.empty()) {
       DisparityImagePtr lr_disp_msg = disparityToDisparityImage(
           l_image_msg, scaledDisparity, model_, min_disparity, max_disparity,
-          border, shrink_scale);
+          border, downsample);
       debug_lr_disparity_.publish(lr_disp_msg);
     }
 
     if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
-            std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
-                stereo_matcher_)) {
+            std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(stereo_matcher_)) {
 
       // This is a copy, so only do it if necessary..
-      cv::Mat rlScaledDisparity = bm->scaledRLDisparityMat();
+      cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
         DisparityImagePtr rl_disp_msg = disparityToDisparityImage(
             l_image_msg, rlScaledDisparity, model_, min_disparity,
-            max_disparity, border, shrink_scale);
+            max_disparity, border, downsample);
         debug_rl_disparity_.publish(rl_disp_msg);
       }
     }
@@ -292,8 +286,8 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Tweak all settings to be valid
   config.correlation_window_size |= 0x1; // must be odd
   config.max_disparity = (config.max_disparity / 4) * 4;
-  config.shrink_scale =
-      static_cast<int>(pow(2, static_cast<int>(log2(config.shrink_scale))));
+  config.downsample =
+      static_cast<int>(pow(2, static_cast<int>(log2(config.downsample))));
 
   int scanline_mask = 0;
   if (config.path_type == VXSGBM_SCANLINE_ALL) {
@@ -354,7 +348,7 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   params_.hc_win_size = config.hc_win_size;
   params_.flags = flags;
   params_.scanline_mask = scanline_mask;
-  params_.shrink_scale = config.shrink_scale;
+  params_.downsample = config.downsample;
 
   update_stereo_matcher();
 }

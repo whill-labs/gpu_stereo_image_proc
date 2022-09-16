@@ -42,80 +42,8 @@
 #include <ros/ros.h>
 
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_params.h"
 
-struct VXStereoMatcherParams {
-public:
-  enum DisparityFiltering_t {
-    Filtering_None = 0,
-    Filtering_Bilateral = 1,
-    Filtering_WLS_LeftOnly = 2,
-    Filtering_WLS_LeftRight = 3
-  };
-
-  VXStereoMatcherParams()
-      : shrink_scale(2), min_disparity(0), max_disparity(64), P1(8), P2(109),
-        sad_win_size(5), ct_win_size(0), clip(31), max_diff(16),
-        uniqueness_ratio(50), scanline_mask(NVX_SCANLINE_CROSS),
-        flags(NVX_SGM_PYRAMIDAL_STEREO), filtering(Filtering_None) {}
-
-  cv::Size image_size;
-  int shrink_scale;
-  int min_disparity;
-  int max_disparity;
-
-  int P1, P2, sad_win_size, ct_win_size, hc_win_size;
-  int clip, max_diff, uniqueness_ratio, scanline_mask, flags;
-
-  DisparityFiltering_t filtering;
-
-  void dump() const {
-    ROS_INFO("===================================");
-    ROS_INFO("image_size  : w %d, h %d", image_size.width, image_size.height);
-    ROS_INFO("shrink_scale: %d", shrink_scale);
-    ROS_INFO("Uniqueness  : %d", uniqueness_ratio);
-    ROS_INFO("Max Diff    : %d", max_diff);
-    ROS_INFO("P1/P2       : P1 %d, P2, %d", P1, P2);
-    ROS_INFO("Win Size    : SAD %d, CT %d, HC %d", sad_win_size, ct_win_size,
-             hc_win_size);
-    ROS_INFO("Clip        : %d", clip);
-    ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity, max_disparity);
-    ROS_INFO("ScanType    : %02X", scanline_mask);
-    ROS_INFO("Flags       : %02X", flags);
-    ROS_INFO("Filtering   : %s", filter_as_string());
-    ROS_INFO("===================================");
-  }
-
-  bool valid() const {
-    if (image_size.width == 0 || image_size.height == 0)
-      return false;
-
-    return true;
-  }
-
-  const char *filter_as_string() const {
-    if (filtering == Filtering_None) {
-      return "None";
-    } else if (filtering == Filtering_Bilateral) {
-      return "Bilateral";
-    } else if (filtering == Filtering_WLS_LeftOnly) {
-      return "WLS Left-only";
-    } else if (filtering == Filtering_WLS_LeftRight) {
-      return "WLS Left-Right";
-    }
-
-    return "(Unknown)";
-  }
-
-  // Validations from vx_sgbm_processor which we could re-implement
-
-  // if (image_size.width % 4 != 0) {
-  //   ROS_WARN("Image Width must be divisible by 4.");
-  //   return false;
-  // }
-
-  // if (ratio < 0.0 || ratio > 100.0)
-  //   return false;
-};
 
 class VXStereoMatcherBase {
 public:
@@ -123,11 +51,7 @@ public:
 
   VXStereoMatcherBase(const VXStereoMatcherParams &params);
 
-  // VXStereoMatcherBase(VXStereoMatcherBase &&obj);
-
   virtual ~VXStereoMatcherBase();
-
-  //  VXStereoMatcher &operator=(VXStereoMatcher &&obj);
 
   virtual void compute(cv::InputArray left, cv::InputArray right,
                        cv::OutputArray disparity) = 0;
@@ -136,28 +60,29 @@ public:
 
   cv::Mat unfilteredDisparityMat() const {
     cv::Mat output;
-    nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
+    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
                                      VX_MEMORY_TYPE_HOST);
     map.getMat().copyTo(output);
     return output;
   }
 
-  virtual cv::Mat scaledDisparityMat() const {
-    cv::Mat output;
-    nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
-                                     VX_MEMORY_TYPE_HOST);
-    map.getMat().copyTo(output);
-    return output;
-  }
+  // virtual cv::Mat scaledDisparityMat() const {
+  //   cv::Mat output;
+  //   nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
+  //                                    VX_MEMORY_TYPE_HOST);
+  //   map.getMat().copyTo(output);
+  //   return output;
+  // }
 
 protected:
   vx_context context_;
   vx_graph graph_;
   vx_image left_image_;
   vx_image right_image_;
+
   vx_image left_scaled_;
   vx_image right_scaled_;
-  vx_image disparity_scaled_;
+  // vx_image disparity_scaled_;
   vx_image disparity_;
 
   VXStereoMatcherParams params_;

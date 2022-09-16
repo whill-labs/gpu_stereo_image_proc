@@ -41,12 +41,12 @@
 VXStereoMatcherBase::VXStereoMatcherBase()
     : context_(nullptr), graph_(nullptr), left_image_(nullptr),
       right_image_(nullptr), left_scaled_(nullptr), right_scaled_(nullptr),
-      disparity_scaled_(nullptr), disparity_(nullptr) {}
+      disparity_(nullptr) {}
 
 VXStereoMatcherBase::VXStereoMatcherBase(const VXStereoMatcherParams &params)
     : context_(nullptr), graph_(nullptr), left_image_(nullptr),
       right_image_(nullptr), left_scaled_(nullptr), right_scaled_(nullptr),
-      disparity_scaled_(nullptr), disparity_(nullptr), params_(params) {
+      disparity_(nullptr), params_(params) {
   vx_status status;
 
   context_ = vxCreateContext();
@@ -55,29 +55,24 @@ VXStereoMatcherBase::VXStereoMatcherBase(const VXStereoMatcherParams &params)
   graph_ = vxCreateGraph(context_);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)graph_));
 
-  left_image_ = vxCreateImage(context_, params.image_size.width,
-                              params.image_size.height, VX_DF_IMAGE_U8);
+  left_image_ = vxCreateImage(context_, 
+                              params.image_size().width,
+                              params.image_size().height,
+                              VX_DF_IMAGE_U8);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)left_image_));
 
-  right_image_ = vxCreateImage(context_, params.image_size.width,
-                               params.image_size.height, VX_DF_IMAGE_U8);
+  right_image_ = vxCreateImage(context_, 
+                              params.image_size().width,
+                              params.image_size().height,
+                              VX_DF_IMAGE_U8);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)right_image_));
 
-  disparity_ = vxCreateImage(context_, params.image_size.width,
-                             params.image_size.height, VX_DF_IMAGE_S16);
+  disparity_ = vxCreateImage(context_,
+                              params.scaled_image_size().width,
+                              params.scaled_image_size().height,
+                              VX_DF_IMAGE_S16);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_));
 }
-
-// VXStereoMatcher::VXStereoMatcher(VXStereoMatcher &&obj)
-//     : context_(obj.context_), graph_(obj.graph_),
-//     left_image_(obj.left_image_),
-//       right_image_(obj.right_image_), disparity_(obj.disparity_) {
-//   obj.context_ = 0;
-//   obj.graph_ = 0;
-//   obj.left_image_ = 0;
-//   obj.right_image_ = 0;
-//   obj.disparity_ = 0;
-// }
 
 VXStereoMatcherBase::~VXStereoMatcherBase() {
   vxReleaseImage(&left_image_);
@@ -87,18 +82,3 @@ VXStereoMatcherBase::~VXStereoMatcherBase() {
   vxReleaseContext(&context_);
 }
 
-// VXStereoMatcher &VXStereoMatcherBase::operator=(VXStereoMatcher &&obj) {
-//   context_ = obj.context_;
-//   graph_ = obj.graph_;
-//   left_image_ = obj.left_image_;
-//   right_image_ = obj.right_image_;
-//   disparity_ = obj.disparity_;
-
-//   obj.context_ = 0;
-//   obj.graph_ = 0;
-//   obj.left_image_ = 0;
-//   obj.right_image_ = 0;
-//   obj.disparity_ = 0;
-
-//   return *this;
-// }

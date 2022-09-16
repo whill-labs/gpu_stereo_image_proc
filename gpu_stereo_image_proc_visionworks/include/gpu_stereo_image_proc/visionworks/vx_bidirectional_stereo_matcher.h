@@ -49,22 +49,15 @@ public:
   VXBidirectionalStereoMatcher();
   VXBidirectionalStereoMatcher(const VXStereoMatcherParams &params);
 
-  // VXBidirectionalStereoMatcher(VXBidirectionalStereoMatcher &&obj);
-
   ~VXBidirectionalStereoMatcher();
-
-  // VXBidirectionalStereoMatcher &operator=(VXBidirectionalStereoMatcher
-  // &&obj);
 
   void compute(cv::InputArray left, cv::InputArray right,
                cv::OutputArray disparity) override;
 
-  cv::Mat scaledDisparityMat() const override { return filter_output_; }
-  cv::Mat scaledConfidenceMat() const { return scaled_confidence_; }
-
-  cv::Mat scaledRLDisparityMat() const {
+  cv::Mat confidenceMat() const { return confidence_; }
+  cv::Mat RLDisparityMat() const {
     cv::Mat output;
-    nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_scaled_, 0, NULL,
+    nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_, 0, NULL,
                                      VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
     map.getMat().copyTo(output);
     return output;
@@ -73,12 +66,9 @@ public:
 private:
   vx_image flipped_left_;
   vx_image flipped_right_;
-  vx_image flipped_rl_disparity_scaled_;
-  // vx_image negated_rl_disparity_scaled_;
-  // vx_image rl_disparity_scaled_;
-  // vx_image flipped_rl_disparity_;
+  vx_image flipped_rl_disparity_;
 
-  cv::Mat filter_output_, scaled_confidence_;
+  cv::Mat filter_output_, confidence_;
 
   // This class is non-copyable
   VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;
