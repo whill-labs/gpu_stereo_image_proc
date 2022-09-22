@@ -1,0 +1,42 @@
+<package>
+  <name>gpu_stereo_image_proc_libsgm</name>
+  <version>1.0.0</version>
+  <description>Stereo disparity processing by using Fixstars libSGM.</description>
+  <author>Seiya Shimizu</author>
+  <maintainer email="shimizu@whill.jp">Seiya Shimizu</maintainer>
+  <license>BSD</license>
+  <url>https://github.com/WHILL/gpu_stereo_image_proc</url>
+
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <test_depend>rostest</test_depend>
+  
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+  <build_depend>image_geometry</build_depend>
+  <build_depend>image_proc</build_depend>
+  <build_depend>image_transport</build_depend>
+  <build_depend>message_filters</build_depend>
+  <build_depend>nodelet</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>stereo_msgs</build_depend>
+  <build_depend>opencv_apps</build_depend>
+  <build_depend>gpu_stereo_image_proc_common</build_depend>
+
+  <run_depend>cv_bridge</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
+  <run_depend>image_geometry</run_depend>
+  <run_depend>image_proc</run_depend>
+  <run_depend>image_transport</run_depend>
+  <run_depend>message_filters</run_depend>
+  <run_depend>nodelet</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>stereo_msgs</run_depend>
+  <run_depend>gpu_stereo_image_proc_common</run_depend>
+
+</package>
