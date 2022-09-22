@@ -2,47 +2,43 @@
 
 ## Overview
 
-This package provides ROS wrapper for two CUDA implementations of Semi-Global (Block) Matching (i.e. SGM or SGBM):
+This package provides a set of ROS nodelets for CUDA implementations of two Semi-Global (Block) Matching (i.e. SGM or SGBM) algorithms:
 
 * [NVIDIA VisionWorks](https://developer.nvidia.com/embedded/visionworks), and
 * [Fixstars libSGM](https://github.com/fixstars/libSGM)
 
-It has diverged significantly from [whill-lab's](https://github.com/whill-labs) [upstream package](https://github.com/whill-labs/gpu_stereo_image_proc).
+With stubs for an OpenCV-based nodelet in process.
 
-As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x.   It also assumes our [OpenCV](https://gitlab.com/apl-ocean-engineering/jetson/buildopencv) and [ROS](https://gitlab.com/apl-ocean-engineering/jetson/buildros1) builds.
+This version is based on [whill-lab's](https://github.com/whill-labs) [upstream package](https://github.com/whill-labs/gpu_stereo_image_proc), but has diverged significantly in structure.
 
-## Requirement
+Each algorithm is in its own ROS package so individual packages can be disabled by adding them to the [Catkin blocklist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#whitelisting-and-blacklisting-packages). 
 
-- [CUDA (compute capabilities >= 3.5)](https://developer.nvidia.com/cuda-downloads)
-- [VisionWorks 1.6 or later](https://developer.nvidia.com/embedded/visionworks)
-- OpenCV 3.2 or later
-- CMake 3.1 or later
-- ROS Melodic
+As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x.   It also assumes the Trisect's customized [OpenCV](https://gitlab.com/apl-ocean-engineering/jetson/buildopencv) and [ROS](https://gitlab.com/apl-ocean-engineering/jetson/buildros1) builds.
 
 ## Installation
 
-Only "Build from Source" option is provided. Simply pull the source and build the package on your machine.
+Pull this repo into a catkin workspace and build
 
 ```sh
 cd <path-to-your-catkin-workspace>/src
 git clone https://github.com/WHILL/gpu_stereo_image_proc.git
 cd ..
 catkin build
-# Note: libSGM is automatically pulled to gpu_stereo_image_proc/libSGM as an external project in CMakeLists
 ```
 
+`gpu_stereo_image_proc_libsgm` will automatically pull in libSGM as an external project.
+
+
 ## Usage
-
-### Basic Usage
-
-Basic usage of this package (e.g. subscribed/published topics, node structure) is compatible with [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc). Refer to its [wiki](http://wiki.ros.org/stereo_image_proc?distro=melodic) for quick start.
 
 ### Nodelets
 
 This package contains nodelets for creating disparity images from stereo:
 
-* `gpu_stereo_image_proc/libsgm_disparity`:  Nodelet which wraps Fixstars libSGM.
-* `gpu_stereo_image_proc/vx_disparity`:  Nodelet which wraps NVIDIA VisionWorks.
+* `gpu_stereo_image_proc_libsgm/libsgm_disparity`:  Nodelet which wraps Fixstars libSGM.
+* `gpu_stereo_image_proc_visionworks/vx_disparity`:  Nodelet which wraps NVIDIA VisionWorks.
+
+Basic usage of this package (e.g. subscribed/published topics, node structure) is compatible with [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc). Refer to its [wiki](http://wiki.ros.org/stereo_image_proc?distro=melodic) for quick start.
 
 ### Parameters
 
