@@ -55,6 +55,7 @@ public:
                cv::OutputArray disparity) override;
 
   cv::Mat confidenceMat() const { return confidence_; }
+  
   cv::Mat RLDisparityMat() const {
     cv::Mat output;
     nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_, 0, NULL,
