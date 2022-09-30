@@ -236,6 +236,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     update_stereo_matcher();
   }
 
+  // If you **still** don't have a stereo matcher, give up...
   if (!stereo_matcher_)
     return;
 
@@ -247,14 +248,14 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 
   const auto scaled_camera_info_l(scaleCameraInfo(l_info_msg, downsample));
   const auto scaled_camera_info_r(scaleCameraInfo(r_info_msg, downsample));
-  image_geometry::StereoCameraModel scaled_model_;
-  scaled_model_.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
+  image_geometry::StereoCameraModel scaled_model;
+  scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
   cv::Mat_<int16_t> disparityS16;
   stereo_matcher_->compute(l_image, r_image, disparityS16);
   DisparityImagePtr disp_msg =
-      disparityToDisparityImage(l_image_msg, disparityS16, scaled_model_,
+      disparityToDisparityImage(l_image_msg, disparityS16, scaled_model,
                                 min_disparity, max_disparity, border);
 
   if (debug_topics_) debug_raw_disparity_.publish(disp_msg);
@@ -280,12 +281,12 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       disparityS16.copyTo(masked_disparityS16, confidence_mask);
 
       DisparityImagePtr masked_disp_msg = disparityToDisparityImage(
-          l_image_msg, masked_disparityS16, scaled_model_, min_disparity,
+          l_image_msg, masked_disparityS16, scaled_model, min_disparity,
           max_disparity, border);
       pub_disparity_.publish(masked_disp_msg);
 
     } else {
-      // Not filtering on confidence
+      // No, don't filter on confidence
       pub_disparity_.publish(disp_msg);
     }
   } else {
