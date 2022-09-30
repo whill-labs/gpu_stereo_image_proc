@@ -43,7 +43,6 @@
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
-// n.b. Doesn't actually do anything yet (June 28 2022)
 class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
 public:
   VXBidirectionalStereoMatcher();
@@ -69,6 +68,11 @@ private:
   vx_image flipped_rl_disparity_;
 
   cv::Mat filter_output_, confidence_;
+
+  struct WLSParameters {
+    double lambda;
+    int lrc_threshold;
+  } _wls_params;
 
   // This class is non-copyable
   VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;
