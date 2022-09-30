@@ -39,6 +39,7 @@
 #include <opencv2/imgproc.hpp>
 #include <ros/ros.h>
 
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 VXStereoMatcher::VXStereoMatcher() : VXStereoMatcherBase() {}
@@ -48,22 +49,22 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
   vx_status status;
 
   if (params.downsample > 1) {
-    left_scaled_ = vxCreateImage( context_,
-        params.scaled_image_size().width, params.scaled_image_size().height,
-        VX_DF_IMAGE_U8);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
+    // left_scaled_ = vxCreateImage( context_,
+    //     params.scaled_image_size().width, params.scaled_image_size().height,
+    //     VX_DF_IMAGE_U8);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
 
-    right_scaled_ = vxCreateImage(context_,
-        params.scaled_image_size().width, params.scaled_image_size().height,
-        VX_DF_IMAGE_U8);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
+    // right_scaled_ = vxCreateImage(context_,
+    //     params.scaled_image_size().width, params.scaled_image_size().height,
+    //     VX_DF_IMAGE_U8);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
 
-    vx_node left_scale_node = vxScaleImageNode(
-        graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-    vx_node right_scale_node = vxScaleImageNode(
-        graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    // vx_node left_scale_node = vxScaleImageNode(
+    //     graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    // vx_node right_scale_node = vxScaleImageNode(
+    //     graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
     vx_node sgm_node = nvxSemiGlobalMatchingNode(
         graph_, left_scaled_, right_scaled_, disparity_,
@@ -73,17 +74,8 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
         params.scanline_mask, params.flags);
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    vxReleaseNode(&left_scale_node);
-    vxReleaseNode(&right_scale_node);
     vxReleaseNode(&sgm_node);
   } else {
-    ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, "
-             "clip %d, max_diff %d, UR %d, Scantype "
-             "%02X, Flags %02X",
-             params.min_disparity, params.max_disparity, params.P1, params.P2,
-             params.sad_win_size, params.ct_win_size, params.hc_win_size,
-             params.clip, params.max_diff, params.uniqueness_ratio,
-             params.scanline_mask, params.flags);
     vx_node sgm_node = nvxSemiGlobalMatchingNode(
         graph_, left_image_, right_image_, disparity_, params.min_disparity,
         params.max_disparity, params.P1, params.P2, params.sad_win_size,
@@ -98,6 +90,9 @@ VXStereoMatcher::~VXStereoMatcher() {}
 
 void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
                               cv::OutputArray disparity) {
+
+//  left_image_ = 	nvx_cv::createVXImageFromCVMat(context_, left.getMat());
+//  right_image_ = 	nvx_cv::createVXImageFromCVMat(context_, right.getMat());
   copy_to_vx_image(left, left_image_);
   copy_to_vx_image(right, right_image_);
 
@@ -111,9 +106,14 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
 
     cv::cuda::GpuMat g_filtered;
 
-    nvx_cv::VXImageToCVMatMapper disparity_map(disparity_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
-    nvx_cv::VXImageToCVMatMapper left_map(left_scaled_, 0, NULL, VX_READ_ONLY,
-                                          NVX_MEMORY_TYPE_CUDA);
+    nvx_cv::VXImageToCVMatMapper disparity_map(disparity_,
+                                                0, NULL,
+                                                VX_READ_ONLY,
+                                                NVX_MEMORY_TYPE_CUDA);
+    nvx_cv::VXImageToCVMatMapper left_map(left_scaled_,
+                                                0, NULL,
+                                                VX_READ_ONLY,
+                                                NVX_MEMORY_TYPE_CUDA);
 
     cv::Ptr<cv::cuda::DisparityBilateralFilter> pCudaBilFilter =
         cv::cuda::createDisparityBilateralFilter(nDisp, radius, iters);
@@ -123,6 +123,8 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
     g_filtered.download(disparity);
   } else {
     // No filtering, just use the scaled disparity
-    copy_from_vx_image(disparity_, disparity);
+    nvx_cv::VXImageToCVMatMapper disparity_map(disparity_, 0, NULL, VX_READ_ONLY,
+                                          VX_MEMORY_TYPE_HOST);
+    disparity_map.getMat().copyTo(disparity);
   }
 }

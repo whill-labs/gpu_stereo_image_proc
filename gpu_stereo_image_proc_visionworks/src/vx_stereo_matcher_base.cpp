@@ -36,6 +36,7 @@
 #include <opencv2/cudastereo.hpp>
 #include <ros/ros.h>
 
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 VXStereoMatcherBase::VXStereoMatcherBase()
@@ -72,6 +73,29 @@ VXStereoMatcherBase::VXStereoMatcherBase(const VXStereoMatcherParams &params)
                               params.scaled_image_size().height,
                               VX_DF_IMAGE_S16);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_));
+
+  if (params.downsample > 1) {
+    left_scaled_ = vxCreateImage( context_,
+        params.scaled_image_size().width, params.scaled_image_size().height,
+        VX_DF_IMAGE_U8);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
+
+    right_scaled_ = vxCreateImage(context_,
+        params.scaled_image_size().width, params.scaled_image_size().height,
+        VX_DF_IMAGE_U8);
+    VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
+
+    vx_node left_scale_node = vxScaleImageNode(
+        graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    vx_node right_scale_node = vxScaleImageNode(
+        graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
+    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+
+    vxReleaseNode(&left_scale_node);
+    vxReleaseNode(&right_scale_node);
+  }
+
 }
 
 VXStereoMatcherBase::~VXStereoMatcherBase() {

@@ -40,7 +40,6 @@
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
-#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
 
 class VXStereoMatcher : public VXStereoMatcherBase {

@@ -34,7 +34,9 @@
 #include <iostream>
 #include <ros/ros.h>
 
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
+
 #include <NVX/nvx_opencv_interop.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/cudaarithm.hpp>
@@ -50,16 +52,16 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
   vx_status status;
 
   if (params.downsample > 1) {
-    left_scaled_ = vxCreateImage( context_, 
-        params.scaled_image_size().width, params.scaled_image_size().height, 
-        VX_DF_IMAGE_U8);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
+    // left_scaled_ = vxCreateImage( context_, 
+    //     params.scaled_image_size().width, params.scaled_image_size().height, 
+    //     VX_DF_IMAGE_U8);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
 
-    right_scaled_ = vxCreateImage(
-        context_,
-        params.scaled_image_size().width, params.scaled_image_size().height, 
-        VX_DF_IMAGE_U8);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
+    // right_scaled_ = vxCreateImage(
+    //     context_,
+    //     params.scaled_image_size().width, params.scaled_image_size().height, 
+    //     VX_DF_IMAGE_U8);
+    // VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
 
     // disparity_scaled_ = vxCreateImage(
     //     context_,
@@ -85,13 +87,13 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
         VX_DF_IMAGE_S16);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_));
 
-    vx_node left_scale_node = vxScaleImageNode(
-        graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    // vx_node left_scale_node = vxScaleImageNode(
+    //     graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
     
-    vx_node right_scale_node = vxScaleImageNode(
-        graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+    // vx_node right_scale_node = vxScaleImageNode(
+    //     graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
+    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
     vx_node left_flip_node = nvxFlipImageNode(
         graph_, left_scaled_, flipped_left_, NVX_FLIP_HORIZONTAL);
@@ -118,18 +120,13 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
     VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
 
-    vxReleaseNode(&left_scale_node);
-    vxReleaseNode(&right_scale_node);
+    // vxReleaseNode(&left_scale_node);
+    // vxReleaseNode(&right_scale_node);
+    vxReleaseNode(&left_flip_node);
+    vxReleaseNode(&right_flip_node);
     vxReleaseNode(&sgm_node);
     vxReleaseNode(&rl_sgm_node);
   } else {
-    ROS_INFO("min_disp %d, max_disp %d, P1 %d, P2 %d, SAD %d, CT %d, HC %d, "
-             "clip %d, max_diff %d, UR %d, Scantype "
-             "%02X, Flags %02X",
-             params.min_disparity, params.max_disparity, params.P1, params.P2,
-             params.sad_win_size, params.ct_win_size, params.hc_win_size,
-             params.clip, params.max_diff, params.uniqueness_ratio,
-             params.scanline_mask, params.flags);
     vx_node sgm_node = nvxSemiGlobalMatchingNode(
         graph_, left_image_, right_image_, disparity_, params.min_disparity,
         params.max_disparity, params.P1, params.P2, params.sad_win_size,
@@ -145,6 +142,8 @@ VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                                            cv::InputArray right,
                                            cv::OutputArray disparity) {
+//   left_image_ =  nvx_cv::createVXImageFromCVMat(context_, left.getMat());
+//   right_image_ = nvx_cv::createVXImageFromCVMat(context_, right.getMat());
   copy_to_vx_image(left, left_image_);
   copy_to_vx_image(right, right_image_);
 
@@ -200,7 +199,8 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
     ROS_WARN("In VXBidirectionalStereoMatcher but not doing WLSFiltering;  "
              "this shouldn't happen.");
 
-    // Not sure why you'd be here otherwise...
-    copy_from_vx_image(disparity_, disparity);
+    nvx_cv::VXImageToCVMatMapper disparity_map(disparity_, 0, NULL, VX_READ_ONLY,
+                                          VX_MEMORY_TYPE_HOST);
+    disparity_map.getMat().copyTo(disparity);
   }
 }
