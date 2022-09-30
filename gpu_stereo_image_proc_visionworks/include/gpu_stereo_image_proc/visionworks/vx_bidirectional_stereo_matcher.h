@@ -40,7 +40,6 @@
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
-#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
@@ -54,6 +53,7 @@ public:
                cv::OutputArray disparity) override;
 
   cv::Mat confidenceMat() const { return confidence_; }
+  
   cv::Mat RLDisparityMat() const {
     cv::Mat output;
     nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_, 0, NULL,

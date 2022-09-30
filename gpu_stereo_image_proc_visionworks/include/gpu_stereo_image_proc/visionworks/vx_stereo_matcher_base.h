@@ -41,7 +41,6 @@
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
-#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_params.h"
 
 
@@ -66,14 +65,6 @@ public:
     return output;
   }
 
-  // virtual cv::Mat scaledDisparityMat() const {
-  //   cv::Mat output;
-  //   nvx_cv::VXImageToCVMatMapper map(disparity_scaled_, 0, NULL, VX_READ_ONLY,
-  //                                    VX_MEMORY_TYPE_HOST);
-  //   map.getMat().copyTo(output);
-  //   return output;
-  // }
-
 protected:
   vx_context context_;
   vx_graph graph_;
@@ -82,7 +73,6 @@ protected:
 
   vx_image left_scaled_;
   vx_image right_scaled_;
-  // vx_image disparity_scaled_;
   vx_image disparity_;
 
   VXStereoMatcherParams params_;

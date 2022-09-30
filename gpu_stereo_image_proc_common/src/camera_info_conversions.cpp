@@ -13,7 +13,7 @@ scaleCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam,
   out->width = cam->width / downsample;
   out->height = cam->height / downsample;
 
-  // These don't make a lot of sense after scaling
+  // Distortion parameters aaren't meaningful after scaling
   //  out->distortion_model
   //  out->D
 
