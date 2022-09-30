@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
 project(gpu_stereo_image_proc_common)
 
-find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_proc image_transport message_filters nodelet sensor_msgs stereo_msgs)
+find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry 
+        image_proc image_transport message_filters nodelet 
+        sensor_msgs stereo_msgs)
 find_package(Boost REQUIRED COMPONENTS thread)
 
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
@@ -11,6 +13,12 @@ if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
+
+# Dynamic reconfigure support
+generate_dynamic_reconfigure_options(
+  cfg/DisparityBilateralFilter.cfg
+  cfg/DisparityWLSFilter.cfg
+  )
 
 catkin_package(
   CATKIN_DEPENDS image_geometry image_proc sensor_msgs stereo_msgs

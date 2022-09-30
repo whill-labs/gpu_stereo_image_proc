@@ -183,6 +183,8 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
         params_.sad_win_size);
     cv ::Ptr<cv::ximgproc::DisparityWLSFilter> wls =
         cv::ximgproc::createDisparityWLSFilter(sgbm);
+    wls->setLambda(params_.wls_filter_params.lambda);
+    wls->setLRCthresh(params_.wls_filter_params.lrc_threshold);
 
     // Supply our own ROI otherwise it drops half of the image
     const int border = params_.max_disparity;

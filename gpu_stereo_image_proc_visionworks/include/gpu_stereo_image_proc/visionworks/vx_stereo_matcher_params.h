@@ -65,6 +65,28 @@ public:
 
   DisparityFiltering_t filtering;
 
+  struct BilateralFilterParams {
+    BilateralFilterParams()
+        : sigma_range(10), radius(3), num_iters(1), max_disc_threshold(0.2),
+          edge_threshold(0.1) {
+      ;
+    }
+
+    double sigma_range;
+    int radius;
+    int num_iters;
+    double max_disc_threshold;
+    double edge_threshold;
+
+  } bilateral_filter_params;
+
+  struct WLSFilterParams {
+    WLSFilterParams() : lambda(0), lrc_threshold(24) { ; }
+
+    double lambda;
+    int lrc_threshold;
+  } wls_filter_params;
+
   void dump() const {
     ROS_INFO("===================================");
     ROS_INFO("image_size  : w %d, h %d", image_size().width, image_size().height);
