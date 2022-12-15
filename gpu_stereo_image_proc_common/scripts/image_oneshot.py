@@ -146,7 +146,7 @@ if __name__=="__main__":
                     help='Output image topics')
 
     parser.add_argument('--timeout',
-                    default=5.0,
+                    default=5.0, type=float,
                     help='Timeout while waiting for output topics in seconds (default 5.0)')
 
 
