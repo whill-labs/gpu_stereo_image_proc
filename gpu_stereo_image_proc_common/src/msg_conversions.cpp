@@ -9,7 +9,7 @@ using namespace stereo_msgs;
 stereo_msgs::DisparityImagePtr disparityToDisparityImage(
     const ImageConstPtr &image, const cv::Mat_<int16_t> disparity16,
     const image_geometry::StereoCameraModel &model, int min_disparity,
-    int max_disparity, int border, float downsample) {
+    int max_disparity, int border) {
 
   DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
   disp_msg->header = image->header;
@@ -31,8 +31,7 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   // We convert from fixed-point to float disparity and also adjust for any
   // x-offset between the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
   disparity16.convertTo(dmat, dmat.type(), inv_dpp,
-                        -(model.left().cx() - model.right().cx()) /
-                            downsample);
+                        -(model.left().cx() - model.right().cx()));
   ROS_ASSERT(dmat.data == &dimage.data[0]);
   /// @todo is_bigendian? :)
 
@@ -50,7 +49,7 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   disp_msg->valid_window.height = valid_window.height;
 
   // Stereo parameters
-  disp_msg->f = model.right().fx() / downsample;
+  disp_msg->f = model.right().fx();
   disp_msg->T = model.baseline();
 
   /// @todo Window of (potentially) valid disparities

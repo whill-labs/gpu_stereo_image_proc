@@ -333,12 +333,12 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   scaled_left_rect_.publish(left_rect_msg_bridge.toImageMsg());
 
   if (debug_topics_) {
-    // This is a copy, so only do it if necessary..
+    // This results in an copy of the mat, so only do it if necessary..
     cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
     if (!scaledDisparity.empty()) {
       DisparityImagePtr lr_disp_msg = disparityToDisparityImage(
-          l_image_msg, scaledDisparity, model_, min_disparity, max_disparity,
-          border, downsample);
+          l_image_msg, scaledDisparity, scaled_model, min_disparity, max_disparity,
+          border);
       debug_lr_disparity_.publish(lr_disp_msg);
     }
 
@@ -346,12 +346,12 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
             std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
                 stereo_matcher_)) {
 
-      // This is a copy, so only do it if necessary..
+    // This results in an copy of the mat, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
         DisparityImagePtr rl_disp_msg = disparityToDisparityImage(
-            l_image_msg, rlScaledDisparity, model_, min_disparity,
-            max_disparity, border, downsample);
+            l_image_msg, rlScaledDisparity, scaled_model, min_disparity,
+            max_disparity, border);
         debug_rl_disparity_.publish(rl_disp_msg);
       }
     }

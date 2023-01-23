@@ -9,5 +9,4 @@ stereo_msgs::DisparityImagePtr
 disparityToDisparityImage(const sensor_msgs::ImageConstPtr &image,
                           const cv::Mat_<int16_t> disparity16,
                           const image_geometry::StereoCameraModel &model,
-                          int min_disparity, int max_disparity, int border,
-                          float shrink_scale = 1.0);
+                          int min_disparity, int max_disparity, int border);
