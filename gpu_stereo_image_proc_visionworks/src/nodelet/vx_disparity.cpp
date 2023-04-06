@@ -52,6 +52,7 @@
 
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
+#include <sensor_msgs/Image.h>
 
 #include "gpu_stereo_image_proc_common/DisparityBilateralFilterConfig.h"
 #include "gpu_stereo_image_proc_common/DisparityWLSFilterConfig.h"
@@ -86,6 +87,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   boost::mutex connect_mutex_;
   ros::Publisher pub_disparity_, debug_lr_disparity_, debug_rl_disparity_;
   ros::Publisher debug_raw_disparity_, debug_disparity_mask_, pub_confidence_;
+  ros::Publisher pub_depth_;
 
   ros::Publisher scaled_left_camera_info_, scaled_right_camera_info_;
   ros::Publisher scaled_left_rect_;
@@ -176,6 +178,9 @@ void VXDisparityNodelet::onInit() {
     boost::lock_guard<boost::mutex> lock(connect_mutex_);
     pub_disparity_ =
         nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
+
+    pub_depth_ =
+        nh.advertise<Image>("depth", 1, connect_cb, connect_cb);
 
     pub_confidence_ =
         nh.advertise<Image>("confidence", 1, connect_cb, connect_cb);
@@ -273,6 +278,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   DisparityImagePtr disp_msg =
       disparityToDisparityImage(l_image_msg, disparityS16, scaled_model,
                                 min_disparity, max_disparity, border);
+  DisparityImagePtr disp_msg_to_convert;
 
   if (debug_topics_) debug_raw_disparity_.publish(disp_msg);
 
@@ -311,14 +317,21 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
           l_image_msg, masked_disparityS16, scaled_model, min_disparity,
           max_disparity, border);
       pub_disparity_.publish(masked_disp_msg);
+      disp_msg_to_convert = masked_disp_msg;
 
     } else {
       // No, don't filter on confidence
       pub_disparity_.publish(disp_msg);
+      disp_msg_to_convert = disp_msg;
     }
   } else {
     pub_disparity_.publish(disp_msg);
+    disp_msg_to_convert = disp_msg;
   }
+
+  // Publish a depth image of type sensor_msgs/Image
+  ImagePtr depth_msg = disparityImageToDepthImage(disp_msg);
+  pub_depth_.publish(depth_msg);
 
   scaled_left_camera_info_.publish(scaled_camera_info_l);
   scaled_right_camera_info_.publish(scaled_camera_info_r);

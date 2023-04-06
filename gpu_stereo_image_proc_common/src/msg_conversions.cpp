@@ -63,6 +63,30 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   return disp_msg;
 }
 
+sensor_msgs::ImagePtr disparityImageToDepthImage(DisparityImagePtr &disp_msg) {
+
+  // Create a deep copy of the disparity image
+  ImagePtr depth_msg = boost::make_shared<Image>();
+  depth_msg->header = disp_msg->image.header;
+  depth_msg->height = disp_msg->image.height;
+  depth_msg->width = disp_msg->image.width;
+  depth_msg->encoding = disp_msg->image.encoding;
+  depth_msg->is_bigendian = disp_msg->image.is_bigendian;
+  depth_msg->step = disp_msg->image.step;
+  depth_msg->data = disp_msg->image.data;
+
+  // For disparity d, the depth from the camera is Z = fT/d.
+  for (int row = 0; row < depth_msg->height; row++) {
+    for (int step = 0; step < depth_msg->width; step++) {
+      depth_msg->data[row * depth_msg->width + step] =
+      disp_msg->f * disp_msg->T /
+      depth_msg->data[row * depth_msg->width + step];
+    }
+  }
+
+  return depth_msg;
+}
+
 // Adjust for any x-offset between the principal points: d' = d - (cx_l -
 // cx_r)
 
