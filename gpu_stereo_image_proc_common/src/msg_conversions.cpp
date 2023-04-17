@@ -63,7 +63,7 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   return disp_msg;
 }
 
-sensor_msgs::ImagePtr disparityImageToDepthImage(DisparityImagePtr &disp_msg) {
+sensor_msgs::ImagePtr disparityImageToDepthImage(const DisparityImageConstPtr &disp_msg) {
 
   // Create a deep copy of the disparity image
   ImagePtr depth_msg = boost::make_shared<Image>();
