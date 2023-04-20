@@ -1,0 +1,41 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-json
+    -   id: check-merge-conflict
+    -   id: check-xml
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+    -   id: mixed-line-ending
+    -   id: trailing-whitespace
+
+-   repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v16.0.1
+    hooks:
+    -   id: clang-format
+        # Respect .clang-format if it exists, otherwise use Google
+        args: ["--fallback-style=Google"]
+
+# -   repo: https://gitlab.com/daverona/pre-commit/cpp
+#     rev: 0.8.0
+#     hooks:
+#     -   id: cpplint
+#         args: ["--filter=-build/include_order,-readability/todo"]
+
+-   repo: https://github.com/psf/black
+    rev: 22.12.0
+    hooks:
+    -   id: black
+        # For now, no configuration. May want "--line-length 80"
+-   repo: https://github.com/PyCQA/flake8
+    rev: 5.0.4
+    hooks:
+    -   id: flake8
+        # pep8-naming catches camel_case violations
+        additional_dependencies: [pep8-naming, flake8-bugbear, flake8-comprehensions]
+        # formatting handles line-length, no reason for linter to also flag.
+        args: [--ignore, E501, --per-file-ignores, "__init__.py:F401"]
