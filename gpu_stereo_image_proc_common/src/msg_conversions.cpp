@@ -1,5 +1,4 @@
 #include <gpu_stereo_image_proc/msg_conversions.h>
-
 #include <ros/ros.h>
 #include <sensor_msgs/image_encodings.h>
 
@@ -9,14 +8,13 @@ using namespace stereo_msgs;
 stereo_msgs::DisparityImagePtr disparityToDisparityImage(
     const ImageConstPtr &image, const cv::Mat_<int16_t> disparity16,
     const image_geometry::StereoCameraModel &model, int min_disparity,
-    int max_disparity, int border) {
-
+    int max_disparity, int border, cv::InputArray mask) {
   DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
   disp_msg->header = image->header;
   disp_msg->image.header = image->header;
 
-  const int DPP = 16;               // disparities per pixel
-  const double inv_dpp = 1.0 / DPP; // downsample / DPP
+  const int DPP = 16;                // disparities per pixel
+  const double inv_dpp = 1.0 / DPP;  // downsample / DPP
 
   // Fill in DisparityImage image data, converting to 32-bit float
   sensor_msgs::Image &dimage = disp_msg->image;
@@ -30,8 +28,18 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
 
   // We convert from fixed-point to float disparity and also adjust for any
   // x-offset between the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
-  disparity16.convertTo(dmat, dmat.type(), inv_dpp,
-                        -(model.left().cx() - model.right().cx()));
+  if (!mask.empty()) {
+    cv::Mat masked_disparity;
+    disparity16.copyTo(masked_disparity, mask);
+
+    // \todo(amarburg)  Interestingly there doesn't seem to be a masked
+    // convertTo function..  could write one?
+    disparity16.convertTo(dmat, dmat.type(), inv_dpp,
+                          -(model.left().cx() - model.right().cx()));
+  } else {
+    disparity16.convertTo(dmat, dmat.type(), inv_dpp,
+                          -(model.left().cx() - model.right().cx()));
+  }
   ROS_ASSERT(dmat.data == &dimage.data[0]);
   /// @todo is_bigendian? :)
 

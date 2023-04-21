@@ -33,27 +33,41 @@
  *********************************************************************/
 #pragma once
 
-#include <opencv2/core.hpp>
-
 #include <NVX/nvx.h>
 #include <VX/vx.h>
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
+#include <opencv2/core.hpp>
+
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
 
 class VXStereoMatcher : public VXStereoMatcherBase {
-public:
+ public:
   VXStereoMatcher();
   VXStereoMatcher(const VXStereoMatcherParams &params);
 
   virtual ~VXStereoMatcher();
 
-  void compute(cv::InputArray left, cv::InputArray right,
-               cv::OutputArray disparity) override;
+  void compute(cv::InputArray left, cv::InputArray right) override;
 
-protected:
+  cv::Mat disparity() const override {
+    if (params_.filtering == VXStereoMatcherParams::Filtering_Bilateral) {
+      // I suspect this is inefficient...
+      cv::Mat out;
+      g_filtered_.download(out);
+      return out;
+    } else {
+      // Call the super
+      return VXStereoMatcherBase::disparity();
+    }
+  }
+
+ protected:
   // noncopyable
   VXStereoMatcher(const VXStereoMatcher &) = delete;
   VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;
+
+  // GpuMat which stores the result **if** filtering is enabled
+  cv::cuda::GpuMat g_filtered_;
 };
