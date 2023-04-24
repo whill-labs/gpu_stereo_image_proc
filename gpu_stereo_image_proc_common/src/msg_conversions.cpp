@@ -79,11 +79,11 @@ DisparityImageGenerator::DisparityImageGenerator (
   depth = depth_msg;
 }
 
-DisparityImageGenerator::getDisparity() {
+stereo_msgs::DisparityImagePtr DisparityImageGenerator::getDisparity() {
   return disparity;
 }
 
-DisparityImageGenerator::getDepth() {
+sensor_msgs::ImagePtr DisparityImageGenerator::getDepth() {
   return depth;
 }
 
