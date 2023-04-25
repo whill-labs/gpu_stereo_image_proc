@@ -276,7 +276,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   cv::Mat_<int16_t> disparityS16;
   stereo_matcher_->compute(l_image, r_image, disparityS16);
   DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
-                                min_disparity, max_disparity, border);
+                                min_disparity, max_disparity, border, downsample);
   DisparityImagePtr disp_msg = dg.getDisparity();
   DisparityImageGenerator dg_for_depth = dg;
 
@@ -314,8 +314,8 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       disparityS16.copyTo(masked_disparityS16, confidence_mask);
 
       
-      DisparityImageGenerator masked_dg(l_image_msg, disparityS16, scaled_model,
-                                min_disparity, max_disparity, border);
+      DisparityImageGenerator masked_dg(l_image_msg, masked_disparityS16, scaled_model, min_disparity,
+          max_disparity, border, downsample);
       DisparityImagePtr masked_disp_msg = masked_dg.getDisparity();
       pub_disparity_.publish(masked_disp_msg);
       dg_for_depth = masked_dg;
@@ -350,9 +350,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     // This is a copy, so only do it if necessary..
     cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
     if (!scaledDisparity.empty()) {
-      DisparityImageGenerator rl_disp_dg(l_image_msg, disparityS16, scaled_model,
-                                min_disparity, max_disparity, border, downsample);
-        DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
+      DisparityImageGenerator lr_disp_dg(l_image_msg, scaledDisparity,
+      scaled_model, min_disparity, max_disparity, border, downsample);
+      DisparityImagePtr lr_disp_msg = lr_disp_dg.getDisparity();
       debug_lr_disparity_.publish(lr_disp_msg);
     }
 
@@ -363,8 +363,8 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       // This is a copy, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
-        DisparityImageGenerator rl_disp_dg(l_image_msg, disparityS16, scaled_model,
-                                min_disparity, max_disparity, border, downsample);
+        DisparityImageGenerator rl_disp_dg(l_image_msg, rlScaledDisparity, 
+        scaled_model, min_disparity, max_disparity, border, downsample);
         DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
         debug_rl_disparity_.publish(rl_disp_msg);
       }
