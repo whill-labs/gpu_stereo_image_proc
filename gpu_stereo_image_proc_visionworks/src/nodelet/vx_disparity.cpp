@@ -43,7 +43,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
-#include <nodelet/nodelet.h>z
+#include <nodelet/nodelet.h>
 #include <ros/ros.h>
 
 #include <cv_bridge/cv_bridge.h>
