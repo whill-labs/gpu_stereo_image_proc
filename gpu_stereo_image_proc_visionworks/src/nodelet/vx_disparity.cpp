@@ -43,7 +43,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
-#include <nodelet/nodelet.h>
+#include <nodelet/nodelet.h>z
 #include <ros/ros.h>
 
 #include <cv_bridge/cv_bridge.h>
@@ -275,10 +275,10 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   // Block matcher produces 16-bit signed (fixed point) disparity image
   cv::Mat_<int16_t> disparityS16;
   stereo_matcher_->compute(l_image, r_image, disparityS16);
-  DisparityImagePtr disp_msg =
-      disparityToDisparityImage(l_image_msg, disparityS16, scaled_model,
+  DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
                                 min_disparity, max_disparity, border);
-  DisparityImagePtr disp_msg_to_convert;
+  DisparityImagePtr disp_msg = dg.getDisparity();
+  DisparityImageGenerator dg_for_depth = dg;
 
   if (debug_topics_) debug_raw_disparity_.publish(disp_msg);
 
@@ -313,20 +313,21 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       cv::Mat masked_disparityS16;
       disparityS16.copyTo(masked_disparityS16, confidence_mask);
 
-      DisparityImagePtr masked_disp_msg = disparityToDisparityImage(
-          l_image_msg, masked_disparityS16, scaled_model, min_disparity,
-          max_disparity, border);
+      
+      DisparityImageGenerator masked_dg(l_image_msg, disparityS16, scaled_model,
+                                min_disparity, max_disparity, border);
+      DisparityImagePtr masked_disp_msg = masked_dg.getDisparity();
       pub_disparity_.publish(masked_disp_msg);
-      disp_msg_to_convert = masked_disp_msg;
+      dg_for_depth = masked_dg;
 
     } else {
       // No, don't filter on confidence
       pub_disparity_.publish(disp_msg);
-      disp_msg_to_convert = disp_msg;
+      dg_for_depth = dg;
     }
   } else {
     pub_disparity_.publish(disp_msg);
-    disp_msg_to_convert = disp_msg;
+    dg_for_depth = dg;
   }
 
   // Publish a depth image of type sensor_msgs/Image
@@ -349,9 +350,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     // This is a copy, so only do it if necessary..
     cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
     if (!scaledDisparity.empty()) {
-      DisparityImagePtr lr_disp_msg = disparityToDisparityImage(
-          l_image_msg, scaledDisparity, model_, min_disparity, max_disparity,
-          border, downsample);
+      DisparityImageGenerator rl_disp_dg(l_image_msg, disparityS16, scaled_model,
+                                min_disparity, max_disparity, border, downsample);
+        DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
       debug_lr_disparity_.publish(lr_disp_msg);
     }
 
@@ -362,9 +363,9 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       // This is a copy, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
-        DisparityImagePtr rl_disp_msg = disparityToDisparityImage(
-            l_image_msg, rlScaledDisparity, model_, min_disparity,
-            max_disparity, border, downsample);
+        DisparityImageGenerator rl_disp_dg(l_image_msg, disparityS16, scaled_model,
+                                min_disparity, max_disparity, border, downsample);
+        DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
         debug_rl_disparity_.publish(rl_disp_msg);
       }
     }
