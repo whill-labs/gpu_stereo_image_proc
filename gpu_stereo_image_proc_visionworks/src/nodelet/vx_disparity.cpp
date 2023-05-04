@@ -210,8 +210,12 @@ void VXDisparityNodelet::onInit() {
 // Handles (un)subscribing when clients (un)subscribe
 void VXDisparityNodelet::connectCb() {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
+
+  // If none of the relevant topics have subsubscribers, then we
+  // can relax...
   if ((pub_disparity_.getNumSubscribers() == 0) &&
-      (pub_confidence_.getNumSubscribers() == 0)) {
+      (pub_confidence_.getNumSubscribers() == 0) &&
+      (pub_depth_.getNumSubscribers() == 0)) {
     sub_l_image_.unsubscribe();
     sub_l_info_.unsubscribe();
     sub_r_image_.unsubscribe();
@@ -275,12 +279,12 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   // Block matcher produces 16-bit signed (fixed point) disparity image
   cv::Mat_<int16_t> disparityS16;
   stereo_matcher_->compute(l_image, r_image, disparityS16);
-  DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
-                                min_disparity, max_disparity, border, downsample);
-  DisparityImagePtr disp_msg = dg.getDisparity();
-  DisparityImageGenerator dg_for_depth = dg;
 
-  if (debug_topics_) debug_raw_disparity_.publish(disp_msg);
+  if (debug_topics_) {
+    DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
+                               min_disparity, max_disparity, border);
+    debug_raw_disparity_.publish(raw_dg.getDisparity());
+  }
 
   if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
           std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
@@ -288,51 +292,34 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 
     // Publish confidence
     cv::Mat confidence = bm->confidenceMat();
-
     cv_bridge::CvImage confidence_bridge(l_image_msg->header, "32FC1",
                                          confidence);
     pub_confidence_.publish(confidence_bridge.toImageMsg());
 
     if (confidence_threshold_ > 0) {
-
-      // Convert confidence to 8UC1
-      cv::Mat confidence_8uc1(confidence.size(), CV_8UC1);
-
-      //WLS filter produces float confidences between 0 and 255, so we don't need to scale
-      confidence.convertTo(confidence_8uc1, CV_8UC1);
-      // Yes, filter on confidence
+      // Since we use the mask to **discard** disparities with low confidence,
+      // use CMP_LT to **set** pixels in the mask which have a confidence
+      // below the threshold.
       cv::Mat confidence_mask(confidence.size(), CV_8UC1, cv::Scalar(0));
-      cv::threshold(confidence_8uc1, confidence_mask, confidence_threshold_, 255,
-                     cv::THRESH_BINARY);
+      cv::compare(confidence, confidence_threshold_, confidence_mask, cv::CMP_LT);
 
       if( debug_topics_) {
         cv_bridge::CvImage disparity_mask_bridge(l_image_msg->header, "mono8", confidence_mask);
         debug_disparity_mask_.publish(disparity_mask_bridge.toImageMsg());
       }
 
-      cv::Mat masked_disparityS16;
-      disparityS16.copyTo(masked_disparityS16, confidence_mask);
-
-      
-      DisparityImageGenerator masked_dg(l_image_msg, masked_disparityS16, scaled_model, min_disparity,
-          max_disparity, border, downsample);
-      DisparityImagePtr masked_disp_msg = masked_dg.getDisparity();
-      pub_disparity_.publish(masked_disp_msg);
-      dg_for_depth = masked_dg;
-
-    } else {
-      // No, don't filter on confidence
-      pub_disparity_.publish(disp_msg);
-      dg_for_depth = dg;
+      // Erase disparity values with low confidence
+      const int masked_disparity_value = min_disparity;
+      disparityS16.setTo(masked_disparity_value, confidence_mask);
     }
-  } else {
-    pub_disparity_.publish(disp_msg);
-    dg_for_depth = dg;
   }
 
-  // Publish a depth image of type sensor_msgs/Image
-  ImagePtr depth_msg = disparityImageToDepthImage(disp_msg);
-  pub_depth_.publish(depth_msg);
+  DisparityImageGenerator dg(l_image_msg, disparityS16,
+                              scaled_model, min_disparity, max_disparity,
+                              border);
+
+  pub_disparity_.publish(dg.getDisparity());
+  pub_depth_.publish(dg.getDepth());
 
   scaled_left_camera_info_.publish(scaled_camera_info_l);
   scaled_right_camera_info_.publish(scaled_camera_info_r);
@@ -351,7 +338,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
     if (!scaledDisparity.empty()) {
       DisparityImageGenerator lr_disp_dg(l_image_msg, scaledDisparity,
-      scaled_model, min_disparity, max_disparity, border, downsample);
+                        scaled_model, min_disparity, max_disparity, border);
       DisparityImagePtr lr_disp_msg = lr_disp_dg.getDisparity();
       debug_lr_disparity_.publish(lr_disp_msg);
     }
@@ -364,7 +351,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
         DisparityImageGenerator rl_disp_dg(l_image_msg, rlScaledDisparity, 
-        scaled_model, min_disparity, max_disparity, border, downsample);
+                          scaled_model, min_disparity, max_disparity, border);
         DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
         debug_rl_disparity_.publish(rl_disp_msg);
       }
