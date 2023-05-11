@@ -10,29 +10,28 @@
 #if ((BOOST_VERSION / 100) % 1000) >= 53
 #include <boost/thread/lock_guard.hpp>
 #endif
+#include <cv_bridge/cv_bridge.h>
+#include <dynamic_reconfigure/server.h>
+#include <image_geometry/stereo_camera_model.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
-#include <memory>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
-
-#include <cv_bridge/cv_bridge.h>
-#include <image_geometry/stereo_camera_model.h>
-#include <opencv2/calib3d/calib3d.hpp>
-
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
-#include "gpu_stereo_image_proc_opencv/OpenCVSGBMConfig.h"
-#include <dynamic_reconfigure/server.h>
+#include <memory>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include "gpu_stereo_image_proc/camera_info_conversions.h"
 #include "gpu_stereo_image_proc/msg_conversions.h"
-// #include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
+#include "gpu_stereo_image_proc_opencv/OpenCVSGBMConfig.h"
+// #include
+// "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 // #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 namespace gpu_stereo_image_proc {
@@ -173,7 +172,6 @@ void OpenCVDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
                                      const CameraInfoConstPtr &l_info_msg,
                                      const ImageConstPtr &r_image_msg,
                                      const CameraInfoConstPtr &r_info_msg) {
-
   // Update the camera model
   model_.fromCameraInfo(l_info_msg, r_info_msg);
 
@@ -188,7 +186,8 @@ void OpenCVDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   // params_.image_size = cv::Size(l_image.cols, l_image.rows);
   // if (stereo_matcher_) {
   //   const cv::Size image_size = stereo_matcher_->params().image_size;
-  //   if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
+  //   if (image_size.width != l_image.cols || image_size.height !=
+  //   l_image.rows) {
   //     update_stereo_matcher();
   //   }
   // } else {
@@ -221,13 +220,15 @@ void OpenCVDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   //   cv::Mat_<int16_t> scaledDisparityS16 =
   //       stereo_matcher_->scaledDisparityMat();
   //   DisparityImagePtr disp_msg = disparityToDisparityImage(
-  //       l_image_msg, scaledDisparityS16, model_, min_disparity, max_disparity,
-  //       border, shrink_scale);
+  //       l_image_msg, scaledDisparityS16, model_, min_disparity,
+  //       max_disparity, border, shrink_scale);
   //   pub_scaled_disparity_.publish(disp_msg);
   // }
 
-  // scaled_left_camera_info_.publish(scaleCameraInfo(l_info_msg, shrink_scale));
-  // scaled_right_camera_info_.publish(scaleCameraInfo(r_info_msg, shrink_scale));
+  // scaled_left_camera_info_.publish(scaleCameraInfo(l_info_msg,
+  // shrink_scale));
+  // scaled_right_camera_info_.publish(scaleCameraInfo(r_info_msg,
+  // shrink_scale));
 
   // // Mildly inefficient but good enough...
   // cv::Mat scaledLeftRect;
@@ -261,7 +262,7 @@ void OpenCVDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   //     }
   //   }
   // }
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 void OpenCVDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Tweak all settings to be valid
@@ -315,7 +316,8 @@ void OpenCVDisparityNodelet::configCb(Config &config, uint32_t level) {
   // }
 
   // // check stereo method
-  // // Note: With single-threaded NodeHandle, configCb and imageCb can't be called
+  // // Note: With single-threaded NodeHandle, configCb and imageCb can't be
+  // called
   // // concurrently, so this is thread-safe.
   // params_.sad_win_size = config.correlation_window_size;
   // params_.min_disparity = config.min_disparity;
@@ -353,7 +355,7 @@ bool OpenCVDisparityNodelet::update_stereo_matcher() {
   return true;
 }
 
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 // Register nodelet
 #include <pluginlib/class_list_macros.h>

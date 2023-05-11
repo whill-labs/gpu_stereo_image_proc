@@ -33,19 +33,18 @@
  *********************************************************************/
 #pragma once
 
-#include <opencv2/core.hpp>
-
 #include <NVX/nvx.h>
-#include <NVX/nvx_opencv_interop.hpp>
 #include <VX/vx.h>
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
+#include <NVX/nvx_opencv_interop.hpp>
+#include <opencv2/core.hpp>
+
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_params.h"
 
-
 class VXStereoMatcherBase {
-public:
+ public:
   VXStereoMatcherBase();
 
   VXStereoMatcherBase(const VXStereoMatcherParams &params);
@@ -65,7 +64,7 @@ public:
     return output;
   }
 
-protected:
+ protected:
   vx_context context_;
   vx_graph graph_;
   vx_image left_image_;

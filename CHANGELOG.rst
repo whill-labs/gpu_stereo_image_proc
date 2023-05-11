@@ -2,4 +2,3 @@
 -------------------
 * First release with support for NVIDIA VisionWorks and Fixstars libSGM
 * Contributors: Seiya Shimizu
-

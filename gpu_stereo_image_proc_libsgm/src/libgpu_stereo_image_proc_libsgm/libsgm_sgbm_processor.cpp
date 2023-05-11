@@ -32,6 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 #include "gpu_stereo_image_proc/libsgm/libsgm_sgbm_processor.h"
+
 #include <ros/assert.h>
 #include <sensor_msgs/image_encodings.h>
 
@@ -78,4 +79,4 @@ cv::Mat_<int16_t> LibSGMStereoSGBMProcessor::processDisparity(
   // disparity.max_disparity = getMinDisparity() + getDisparityRange() - 1;
   // disparity.delta_d       = inv_dpp;
 }
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc

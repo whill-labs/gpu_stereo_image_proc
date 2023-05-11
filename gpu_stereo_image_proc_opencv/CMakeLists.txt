@@ -26,7 +26,7 @@ catkin_package(
 
 include_directories(include)
 
-find_package(OpenCV 4 REQUIRED) 
+find_package(OpenCV 4 REQUIRED)
 include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 find_package(CUDA REQUIRED)

@@ -19,7 +19,7 @@ jobs:
            apt-get update -qq
            apt-get install -y python-catkin-tools
            rosdep install -y --from-path .. --ignore-src --rosdistro=melodic
-           
+
       - run:
           name: catkin_make
           command: |

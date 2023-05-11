@@ -32,22 +32,32 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
+#include <ros/ros.h>
+
 #include <iostream>
 #include <opencv2/cudastereo.hpp>
-#include <ros/ros.h>
 
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 VXStereoMatcherBase::VXStereoMatcherBase()
-    : context_(nullptr), graph_(nullptr), left_image_(nullptr),
-      right_image_(nullptr), left_scaled_(nullptr), right_scaled_(nullptr),
+    : context_(nullptr),
+      graph_(nullptr),
+      left_image_(nullptr),
+      right_image_(nullptr),
+      left_scaled_(nullptr),
+      right_scaled_(nullptr),
       disparity_(nullptr) {}
 
 VXStereoMatcherBase::VXStereoMatcherBase(const VXStereoMatcherParams &params)
-    : context_(nullptr), graph_(nullptr), left_image_(nullptr),
-      right_image_(nullptr), left_scaled_(nullptr), right_scaled_(nullptr),
-      disparity_(nullptr), params_(params) {
+    : context_(nullptr),
+      graph_(nullptr),
+      left_image_(nullptr),
+      right_image_(nullptr),
+      left_scaled_(nullptr),
+      right_scaled_(nullptr),
+      disparity_(nullptr),
+      params_(params) {
   vx_status status;
 
   context_ = vxCreateContext();
@@ -56,33 +66,28 @@ VXStereoMatcherBase::VXStereoMatcherBase(const VXStereoMatcherParams &params)
   graph_ = vxCreateGraph(context_);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)graph_));
 
-  left_image_ = vxCreateImage(context_, 
-                              params.image_size().width,
-                              params.image_size().height,
-                              VX_DF_IMAGE_U8);
+  left_image_ = vxCreateImage(context_, params.image_size().width,
+                              params.image_size().height, VX_DF_IMAGE_U8);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)left_image_));
 
-  right_image_ = vxCreateImage(context_, 
-                              params.image_size().width,
-                              params.image_size().height,
-                              VX_DF_IMAGE_U8);
+  right_image_ = vxCreateImage(context_, params.image_size().width,
+                               params.image_size().height, VX_DF_IMAGE_U8);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)right_image_));
 
-  disparity_ = vxCreateImage(context_,
-                              params.scaled_image_size().width,
-                              params.scaled_image_size().height,
-                              VX_DF_IMAGE_S16);
+  disparity_ =
+      vxCreateImage(context_, params.scaled_image_size().width,
+                    params.scaled_image_size().height, VX_DF_IMAGE_S16);
   VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_));
 
   if (params.downsample > 1) {
-    left_scaled_ = vxCreateImage( context_,
-        params.scaled_image_size().width, params.scaled_image_size().height,
-        VX_DF_IMAGE_U8);
+    left_scaled_ =
+        vxCreateImage(context_, params.scaled_image_size().width,
+                      params.scaled_image_size().height, VX_DF_IMAGE_U8);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
 
-    right_scaled_ = vxCreateImage(context_,
-        params.scaled_image_size().width, params.scaled_image_size().height,
-        VX_DF_IMAGE_U8);
+    right_scaled_ =
+        vxCreateImage(context_, params.scaled_image_size().width,
+                      params.scaled_image_size().height, VX_DF_IMAGE_U8);
     VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
 
     vx_node left_scale_node = vxScaleImageNode(
@@ -95,7 +100,6 @@ VXStereoMatcherBase::VXStereoMatcherBase(const VXStereoMatcherParams &params)
     vxReleaseNode(&left_scale_node);
     vxReleaseNode(&right_scale_node);
   }
-
 }
 
 VXStereoMatcherBase::~VXStereoMatcherBase() {
@@ -105,4 +109,3 @@ VXStereoMatcherBase::~VXStereoMatcherBase() {
   vxReleaseGraph(&graph_);
   vxReleaseContext(&context_);
 }
-

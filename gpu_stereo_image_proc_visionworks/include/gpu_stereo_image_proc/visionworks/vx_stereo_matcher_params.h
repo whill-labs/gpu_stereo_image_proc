@@ -34,7 +34,7 @@
 #pragma once
 
 struct VXStereoMatcherParams {
-public:
+ public:
   enum DisparityFiltering_t {
     Filtering_None = 0,
     Filtering_Bilateral = 1,
@@ -43,18 +43,30 @@ public:
   };
 
   VXStereoMatcherParams()
-      : downsample(2), min_disparity(0), max_disparity(64), P1(8), P2(109),
-        sad_win_size(5), ct_win_size(0), clip(31), max_diff(16),
-        uniqueness_ratio(50), scanline_mask(NVX_SCANLINE_CROSS),
-        flags(NVX_SGM_PYRAMIDAL_STEREO), filtering(Filtering_None) {}
+      : downsample(2),
+        min_disparity(0),
+        max_disparity(64),
+        P1(8),
+        P2(109),
+        sad_win_size(5),
+        ct_win_size(0),
+        clip(31),
+        max_diff(16),
+        uniqueness_ratio(50),
+        scanline_mask(NVX_SCANLINE_CROSS),
+        flags(NVX_SGM_PYRAMIDAL_STEREO),
+        filtering(Filtering_None) {}
 
-  void set_image_size( const cv::Size sz ) {
+  void set_image_size(const cv::Size sz) {
     _image_size.width = sz.width;
     _image_size.height = sz.height;
   }
 
   const cv::Size image_size() const { return _image_size; }
-  const cv::Size scaled_image_size() const { return cv::Size(_image_size.width / downsample, _image_size.height / downsample); }
+  const cv::Size scaled_image_size() const {
+    return cv::Size(_image_size.width / downsample,
+                    _image_size.height / downsample);
+  }
 
   int downsample;
   int min_disparity;
@@ -67,7 +79,10 @@ public:
 
   struct BilateralFilterParams {
     BilateralFilterParams()
-        : sigma_range(10), radius(3), num_iters(1), max_disc_threshold(0.2),
+        : sigma_range(10),
+          radius(3),
+          num_iters(1),
+          max_disc_threshold(0.2),
           edge_threshold(0.1) {
       ;
     }
@@ -89,7 +104,8 @@ public:
 
   void dump() const {
     ROS_INFO("===================================");
-    ROS_INFO("image_size  : w %d, h %d", image_size().width, image_size().height);
+    ROS_INFO("image_size  : w %d, h %d", image_size().width,
+             image_size().height);
     ROS_INFO("downsample  : %d", downsample);
     ROS_INFO("Uniqueness  : %d", uniqueness_ratio);
     ROS_INFO("Max Diff    : %d", max_diff);
@@ -105,8 +121,7 @@ public:
   }
 
   bool valid() const {
-    if (image_size().width == 0 || image_size().height == 0)
-      return false;
+    if (image_size().width == 0 || image_size().height == 0) return false;
 
     return true;
   }
@@ -125,8 +140,7 @@ public:
     return "(Unknown)";
   }
 
-private:
-
+ private:
   cv::Size _image_size;
 
   // Validations from vx_sgbm_processor which we could re-implement

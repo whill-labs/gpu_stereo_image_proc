@@ -34,16 +34,16 @@
 #ifndef VX_STEREO_MATCHER_H
 #define VX_STEREO_MATCHER_H
 
-#include <opencv2/core.hpp>
-
 #include <NVX/nvx.h>
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
+#include <opencv2/core.hpp>
+
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
 class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
-public:
+ public:
   VXBidirectionalStereoMatcher();
   VXBidirectionalStereoMatcher(const VXStereoMatcherParams &params);
 
@@ -53,7 +53,7 @@ public:
                cv::OutputArray disparity) override;
 
   cv::Mat confidenceMat() const { return confidence_; }
-  
+
   cv::Mat RLDisparityMat() const {
     cv::Mat output;
     nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_, 0, NULL,
@@ -62,7 +62,7 @@ public:
     return output;
   }
 
-private:
+ private:
   vx_image flipped_left_;
   vx_image flipped_right_;
   vx_image flipped_rl_disparity_;
@@ -76,8 +76,8 @@ private:
 
   // This class is non-copyable
   VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;
-  VXBidirectionalStereoMatcher &
-  operator=(const VXBidirectionalStereoMatcher &) = delete;
+  VXBidirectionalStereoMatcher &operator=(
+      const VXBidirectionalStereoMatcher &) = delete;
 };
 
 #endif

@@ -50,7 +50,7 @@ struct StereoImageSet {
 };
 
 class StereoSGBMProcessor {
-public:
+ public:
   enum class ImageProcFlag {
     LEFT_MONO = 1 << 0,
     LEFT_RECT = 1 << 1,
@@ -71,8 +71,13 @@ public:
   };
 
   StereoSGBMProcessor()
-      : image_size_(640, 480), min_disparity_(0), max_disparity_(128),
-        disparity_range_(64), P1_(200), P2_(400), shrink_scale_(1) {}
+      : image_size_(640, 480),
+        min_disparity_(0),
+        max_disparity_(128),
+        disparity_range_(64),
+        P1_(200),
+        P2_(400),
+        shrink_scale_(1) {}
 
   virtual ~StereoSGBMProcessor(){};
 
@@ -115,9 +120,9 @@ public:
   //              StereoImageSet&                          output,
   //              ImageProcFlag                            flags) const;
 
-  virtual cv::Mat_<int16_t>
-  processDisparity(const cv::Mat &left_rect, const cv::Mat &right_rect,
-                   const image_geometry::StereoCameraModel &model) const = 0;
+  virtual cv::Mat_<int16_t> processDisparity(
+      const cv::Mat &left_rect, const cv::Mat &right_rect,
+      const image_geometry::StereoCameraModel &model) const = 0;
 
   void disparityToDisparityImage(const cv::Mat_<int16_t> disparity16,
                                  const image_geometry::StereoCameraModel &model,
@@ -137,7 +142,7 @@ public:
   //                     sensor_msgs::PointCloud2&                points)
   //                     const;
 
-protected:
+ protected:
   // image_proc::Processor mono_processor_;
   // mutable cv::Mat_<int16_t> disparity16_;
   // mutable cv::Mat_<cv::Vec3f> dense_points_;
@@ -180,34 +185,33 @@ inline int StereoSGBMProcessor::getDisparityRange() const {
 
 inline bool StereoSGBMProcessor::setDisparityRange(int range) {
   ROS_INFO("%s, in %d", __func__, range);
-  if (range < 0)
-    return false;
+  if (range < 0) return false;
   disparity_range_ = range;
   return StereoSGBMProcessor::setMaxDisparity(min_disparity_ + range);
 }
-inline StereoSGBMProcessor::ImageProcFlag
-operator|(StereoSGBMProcessor::ImageProcFlag lhs,
-          StereoSGBMProcessor::ImageProcFlag rhs) {
+inline StereoSGBMProcessor::ImageProcFlag operator|(
+    StereoSGBMProcessor::ImageProcFlag lhs,
+    StereoSGBMProcessor::ImageProcFlag rhs) {
   using T = std::underlying_type_t<StereoSGBMProcessor::ImageProcFlag>;
   return static_cast<StereoSGBMProcessor::ImageProcFlag>(static_cast<T>(lhs) |
                                                          static_cast<T>(rhs));
 }
 
-inline StereoSGBMProcessor::ImageProcFlag
-operator&(StereoSGBMProcessor::ImageProcFlag lhs,
-          StereoSGBMProcessor::ImageProcFlag rhs) {
+inline StereoSGBMProcessor::ImageProcFlag operator&(
+    StereoSGBMProcessor::ImageProcFlag lhs,
+    StereoSGBMProcessor::ImageProcFlag rhs) {
   using T = std::underlying_type_t<StereoSGBMProcessor::ImageProcFlag>;
   return static_cast<StereoSGBMProcessor::ImageProcFlag>(static_cast<T>(lhs) &
                                                          static_cast<T>(rhs));
 }
 
-inline StereoSGBMProcessor::ImageProcFlag &
-operator|=(StereoSGBMProcessor::ImageProcFlag &lhs,
-           StereoSGBMProcessor::ImageProcFlag rhs) {
+inline StereoSGBMProcessor::ImageProcFlag &operator|=(
+    StereoSGBMProcessor::ImageProcFlag &lhs,
+    StereoSGBMProcessor::ImageProcFlag rhs) {
   lhs = lhs | rhs;
   return lhs;
 }
 
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 #endif /* GPU_STEREO_IMAGE_PROC_SGBM_PROCESSOR_H */

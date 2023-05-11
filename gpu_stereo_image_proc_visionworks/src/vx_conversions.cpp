@@ -69,9 +69,8 @@ void copy_to_vx_image(cv::InputArray src, vx_image dest) {
 //   vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
 
 //   vx_df_image vx_format = VX_DF_IMAGE_VIRT;
-//   vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &vx_format, sizeof(vx_format));
-//   int cv_format = 0;
-//   if (vx_format == VX_DF_IMAGE_U8) {
+//   vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &vx_format,
+//   sizeof(vx_format)); int cv_format = 0; if (vx_format == VX_DF_IMAGE_U8) {
 //     cv_format = CV_8U;
 //   } else if (vx_format == VX_DF_IMAGE_S16) {
 //     cv_format = CV_16S;

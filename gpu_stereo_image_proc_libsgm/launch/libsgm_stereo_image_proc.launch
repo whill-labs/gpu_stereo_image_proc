@@ -40,5 +40,5 @@
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="map_to_tmp" args="0 0 0 0 1.57079632679 0 map tmp" ns="stereo" />
   <node pkg="tf2_ros" type="static_transform_publisher" name="tmp_to_cameraLeft" args="0 0 0 -1.57079632679 0 0 tmp cameraLeft" ns="stereo" />
-  
+
 </launch>

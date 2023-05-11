@@ -33,17 +33,17 @@
  *********************************************************************/
 #pragma once
 
-#include <opencv2/core.hpp>
-
 #include <NVX/nvx.h>
 #include <VX/vx.h>
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
+#include <opencv2/core.hpp>
+
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
 
 class VXStereoMatcher : public VXStereoMatcherBase {
-public:
+ public:
   VXStereoMatcher();
   VXStereoMatcher(const VXStereoMatcherParams &params);
 
@@ -52,7 +52,7 @@ public:
   void compute(cv::InputArray left, cv::InputArray right,
                cv::OutputArray disparity) override;
 
-protected:
+ protected:
   // noncopyable
   VXStereoMatcher(const VXStereoMatcher &) = delete;
   VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;

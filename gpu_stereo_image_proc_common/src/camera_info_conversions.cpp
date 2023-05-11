@@ -1,10 +1,8 @@
 #include <gpu_stereo_image_proc/camera_info_conversions.h>
 #include <ros/ros.h>
 
-sensor_msgs::CameraInfoPtr
-scaleCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam,
-                float downsample) {
-
+sensor_msgs::CameraInfoPtr scaleCameraInfo(
+    const sensor_msgs::CameraInfoConstPtr &cam, float downsample) {
   sensor_msgs::CameraInfoPtr out =
       boost::make_shared<sensor_msgs::CameraInfo>();
 
