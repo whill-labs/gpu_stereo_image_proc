@@ -1,23 +1,21 @@
+#include <cv_bridge/cv_bridge.h>
 #include <gpu_stereo_image_proc/msg_conversions.h>
-
 #include <ros/ros.h>
 #include <sensor_msgs/image_encodings.h>
-#include <cv_bridge/cv_bridge.h>
 
 using namespace sensor_msgs;
 using namespace stereo_msgs;
 
-DisparityImageGenerator::DisparityImageGenerator (
+DisparityImageGenerator::DisparityImageGenerator(
     const ImageConstPtr &image, const cv::Mat_<int16_t> disparity16,
     const image_geometry::StereoCameraModel &model, int min_disparity,
     int max_disparity, int border) {
-
   disparity = boost::make_shared<DisparityImage>();
   disparity->header = image->header;
   disparity->image.header = image->header;
 
-  const int DPP = 16;               // disparities per pixel
-  const double inv_dpp = 1.0 / DPP; // downsample / DPP
+  const int DPP = 16;                // disparities per pixel
+  const double inv_dpp = 1.0 / DPP;  // downsample / DPP
 
   // Fill in DisparityImage image data, converting to 32-bit float
   sensor_msgs::Image &dimage = disparity->image;
@@ -37,7 +35,7 @@ DisparityImageGenerator::DisparityImageGenerator (
   /// @todo is_bigendian? :)
 
   // Find all points with disparity less than min_disparity
-  bad_disparity_mask_ = cv::Mat( dmat.size(), CV_8UC1);
+  bad_disparity_mask_ = cv::Mat(dmat.size(), CV_8UC1);
   cv::compare(dmat, min_disparity, bad_disparity_mask_, cv::CMP_LT);
 
   // Explicitly set those disparities to bad_disparity_value
@@ -80,8 +78,7 @@ sensor_msgs::ImagePtr DisparityImageGenerator::getDepth() {
   ROS_ASSERT((dimage.height > 0) && (dimage.width > 0));
   ROS_ASSERT(dimage.encoding == sensor_msgs::image_encodings::TYPE_32FC1);
   cv::Mat_<float> dmat(dimage.height, dimage.width,
-                      reinterpret_cast<float *>(&dimage.data[0]),
-                       dimage.step);
+                       reinterpret_cast<float *>(&dimage.data[0]), dimage.step);
 
   depth_msg->header = dimage.header;
   depth_msg->height = dimage.height;
@@ -90,7 +87,8 @@ sensor_msgs::ImagePtr DisparityImageGenerator::getDepth() {
   depth_msg->step = depth_msg->width * sizeof(float);
   depth_msg->data.resize(depth_msg->step * depth_msg->height);
   cv::Mat_<float> depth_mat(depth_msg->height, depth_msg->width,
-                            reinterpret_cast<float *>(&(depth_msg->data[0])), depth_msg->step);
+                            reinterpret_cast<float *>(&(depth_msg->data[0])),
+                            depth_msg->step);
 
   ROS_ASSERT((depth_mat.size().width == dmat.size().width) &&
              (depth_mat.size().height == dmat.size().height));
@@ -109,8 +107,9 @@ sensor_msgs::ImagePtr DisparityImageGenerator::getDepth() {
   // cv::compare(dmat, 0, zero_disparity_mask, cv::CMP_NE);
 
   // double minVal,maxVal;
-  // cv::minMaxLoc(depth_mat, &minVal, &maxVal, nullptr, nullptr, zero_disparity_mask);
-  // ROS_INFO_STREAM("Min depth: " << minVal << "; max depth: " << maxVal);
+  // cv::minMaxLoc(depth_mat, &minVal, &maxVal, nullptr, nullptr,
+  // zero_disparity_mask); ROS_INFO_STREAM("Min depth: " << minVal << "; max
+  // depth: " << maxVal);
   // }
 
   return depth_msg;
@@ -119,14 +118,13 @@ sensor_msgs::ImagePtr DisparityImageGenerator::getDepth() {
 stereo_msgs::DisparityImagePtr disparityToDisparityImage(
     const ImageConstPtr &image, const cv::Mat_<int16_t> disparity16,
     const image_geometry::StereoCameraModel &model, int min_disparity,
-    int max_disparity, int border, float downsample) {
-
+    int max_disparity, int border) {
   DisparityImagePtr disp_msg = boost::make_shared<DisparityImage>();
   disp_msg->header = image->header;
   disp_msg->image.header = image->header;
 
-  const int DPP = 16;               // disparities per pixel
-  const double inv_dpp = 1.0 / DPP; // downsample / DPP
+  const int DPP = 16;                // disparities per pixel
+  const double inv_dpp = 1.0 / DPP;  // downsample / DPP
 
   // Fill in DisparityImage image data, converting to 32-bit float
   sensor_msgs::Image &dimage = disp_msg->image;
@@ -141,8 +139,7 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   // We convert from fixed-point to float disparity and also adjust for any
   // x-offset between the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
   disparity16.convertTo(dmat, dmat.type(), inv_dpp,
-                        -(model.left().cx() - model.right().cx()) /
-                            downsample);
+                        -(model.left().cx() - model.right().cx()));
   ROS_ASSERT(dmat.data == &dimage.data[0]);
   /// @todo is_bigendian? :)
 
@@ -160,7 +157,7 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   disp_msg->valid_window.height = valid_window.height;
 
   // Stereo parameters
-  disp_msg->f = model.right().fx() / downsample;
+  disp_msg->f = model.right().fx();
   disp_msg->T = model.baseline();
 
   /// @todo Window of (potentially) valid disparities
@@ -173,8 +170,8 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
   return disp_msg;
 }
 
-sensor_msgs::ImagePtr disparityImageToDepthImage(const DisparityImageConstPtr &disp_msg) {
-
+sensor_msgs::ImagePtr disparityImageToDepthImage(
+    const DisparityImageConstPtr &disp_msg) {
   // Create a deep copy of the disparity image
   ImagePtr depth_msg = boost::make_shared<Image>();
   depth_msg->header = disp_msg->image.header;
@@ -189,8 +186,8 @@ sensor_msgs::ImagePtr disparityImageToDepthImage(const DisparityImageConstPtr &d
   for (int row = 0; row < depth_msg->height; row++) {
     for (int step = 0; step < depth_msg->width; step++) {
       depth_msg->data[row * depth_msg->width + step] =
-      disp_msg->f * disp_msg->T /
-      depth_msg->data[row * depth_msg->width + step];
+          disp_msg->f * disp_msg->T /
+          depth_msg->data[row * depth_msg->width + step];
     }
   }
 

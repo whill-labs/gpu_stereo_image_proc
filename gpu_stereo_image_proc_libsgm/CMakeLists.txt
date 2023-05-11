@@ -44,7 +44,7 @@ include(ExternalProject)
 ExternalProject_Add(
     ext-libSGM
     GIT_REPOSITORY "https://github.com/fixstars/libSGM.git"
-    GIT_TAG     "master"
+    GIT_TAG     "2.7.0"
     PREFIX      "${CMAKE_CURRENT_BINARY_DIR}/ext/libSGM"
     INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/libSGM"
     SOURCE_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/libSGM"

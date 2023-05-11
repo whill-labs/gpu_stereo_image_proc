@@ -36,33 +36,31 @@
 #include <boost/thread/lock_guard.hpp>
 #endif
 
+#include <cv_bridge/cv_bridge.h>
+#include <dynamic_reconfigure/server.h>
+#include <image_geometry/stereo_camera_model.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
-#include <memory>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
-
-#include <cv_bridge/cv_bridge.h>
-#include <image_geometry/stereo_camera_model.h>
-#include <opencv2/calib3d/calib3d.hpp>
-
+#include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
-#include <sensor_msgs/Image.h>
 
-#include "gpu_stereo_image_proc_common/DisparityBilateralFilterConfig.h"
-#include "gpu_stereo_image_proc_common/DisparityWLSFilterConfig.h"
-#include "gpu_stereo_image_proc_visionworks/VXSGBMConfig.h"
-#include <dynamic_reconfigure/server.h>
+#include <memory>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include "gpu_stereo_image_proc/camera_info_conversions.h"
 #include "gpu_stereo_image_proc/msg_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
+#include "gpu_stereo_image_proc_common/DisparityBilateralFilterConfig.h"
+#include "gpu_stereo_image_proc_common/DisparityWLSFilterConfig.h"
+#include "gpu_stereo_image_proc_visionworks/VXSGBMConfig.h"
 
 namespace gpu_stereo_image_proc {
 using namespace sensor_msgs;
@@ -132,9 +130,8 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   bool update_stereo_matcher();
 
-  public:
-    VXDisparityNodelet() : confidence_threshold_(0) { ; }
-
+ public:
+  VXDisparityNodelet() : confidence_threshold_(0) { ; }
 };
 
 void VXDisparityNodelet::onInit() {
@@ -179,8 +176,7 @@ void VXDisparityNodelet::onInit() {
     pub_disparity_ =
         nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
 
-    pub_depth_ =
-        nh.advertise<Image>("depth", 1, connect_cb, connect_cb);
+    pub_depth_ = nh.advertise<Image>("depth", 1, connect_cb, connect_cb);
 
     pub_confidence_ =
         nh.advertise<Image>("confidence", 1, connect_cb, connect_cb);
@@ -188,14 +184,16 @@ void VXDisparityNodelet::onInit() {
     private_nh.param("debug", debug_topics_, false);
     if (debug_topics_) {
       ROS_INFO("Publishing debug topics");
-      debug_lr_disparity_ = nh.advertise<DisparityImage>("debug/lr_disparity", 1);
+      debug_lr_disparity_ =
+          nh.advertise<DisparityImage>("debug/lr_disparity", 1);
 
-      debug_rl_disparity_ = nh.advertise<DisparityImage>("debug/rl_disparity", 1);
+      debug_rl_disparity_ =
+          nh.advertise<DisparityImage>("debug/rl_disparity", 1);
 
-    debug_raw_disparity_ =
-        nh.advertise<DisparityImage>("debug/raw_disparity", 1, connect_cb, connect_cb);
+      debug_raw_disparity_ = nh.advertise<DisparityImage>(
+          "debug/raw_disparity", 1, connect_cb, connect_cb);
 
-        debug_disparity_mask_ = nh.advertise<Image>("debug/confidence_mask", 1);
+      debug_disparity_mask_ = nh.advertise<Image>("debug/confidence_mask", 1);
     }
 
     scaled_left_camera_info_ =
@@ -262,8 +260,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   }
 
   // If you **still** don't have a stereo matcher, give up...
-  if (!stereo_matcher_)
-    return;
+  if (!stereo_matcher_) return;
 
   // Pull in some parameters as constants
   const int min_disparity = stereo_matcher_->params().min_disparity;
@@ -282,14 +279,13 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 
   if (debug_topics_) {
     DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
-                               min_disparity, max_disparity, border);
+                                   min_disparity, max_disparity, border);
     debug_raw_disparity_.publish(raw_dg.getDisparity());
   }
 
   if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
           std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
               stereo_matcher_)) {
-
     // Publish confidence
     cv::Mat confidence = bm->confidenceMat();
     cv_bridge::CvImage confidence_bridge(l_image_msg->header, "32FC1",
@@ -301,10 +297,12 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       // use CMP_LT to **set** pixels in the mask which have a confidence
       // below the threshold.
       cv::Mat confidence_mask(confidence.size(), CV_8UC1, cv::Scalar(0));
-      cv::compare(confidence, confidence_threshold_, confidence_mask, cv::CMP_LT);
+      cv::compare(confidence, confidence_threshold_, confidence_mask,
+                  cv::CMP_LT);
 
-      if( debug_topics_) {
-        cv_bridge::CvImage disparity_mask_bridge(l_image_msg->header, "mono8", confidence_mask);
+      if (debug_topics_) {
+        cv_bridge::CvImage disparity_mask_bridge(l_image_msg->header, "mono8",
+                                                 confidence_mask);
         debug_disparity_mask_.publish(disparity_mask_bridge.toImageMsg());
       }
 
@@ -314,9 +312,8 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     }
   }
 
-  DisparityImageGenerator dg(l_image_msg, disparityS16,
-                              scaled_model, min_disparity, max_disparity,
-                              border);
+  DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
+                             min_disparity, max_disparity, border);
 
   pub_disparity_.publish(dg.getDisparity());
   pub_depth_.publish(dg.getDepth());
@@ -334,11 +331,12 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   scaled_left_rect_.publish(left_rect_msg_bridge.toImageMsg());
 
   if (debug_topics_) {
-    // This is a copy, so only do it if necessary..
+    // This results in an copy of the mat, so only do it if necessary..
     cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
     if (!scaledDisparity.empty()) {
       DisparityImageGenerator lr_disp_dg(l_image_msg, scaledDisparity,
-                        scaled_model, min_disparity, max_disparity, border);
+                                         scaled_model, min_disparity,
+                                         max_disparity, border);
       DisparityImagePtr lr_disp_msg = lr_disp_dg.getDisparity();
       debug_lr_disparity_.publish(lr_disp_msg);
     }
@@ -346,25 +344,25 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
             std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
                 stereo_matcher_)) {
-
-      // This is a copy, so only do it if necessary..
+      // This results in an copy of the mat, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
-        DisparityImageGenerator rl_disp_dg(l_image_msg, rlScaledDisparity, 
-                          scaled_model, min_disparity, max_disparity, border);
+        DisparityImageGenerator rl_disp_dg(l_image_msg, rlScaledDisparity,
+                                           scaled_model, min_disparity,
+                                           max_disparity, border);
         DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
         debug_rl_disparity_.publish(rl_disp_msg);
       }
     }
   }
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Settings for the nodelet itself
   confidence_threshold_ = config.confidence_threshold;
 
   // Tweak all settings to be valid
-  config.correlation_window_size |= 0x1; // must be odd
+  config.correlation_window_size |= 0x1;  // must be odd
   config.max_disparity = (config.max_disparity / 4) * 4;
   config.downsample =
       static_cast<int>(pow(2, static_cast<int>(log2(config.downsample))));
@@ -375,29 +373,23 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   } else if (config.path_type == VXSGBM_SCANLINE_CROSS) {
     scanline_mask = NVX_SCANLINE_CROSS;
   } else {
-    if (config.SCANLINE_LEFT_RIGHT)
-      scanline_mask |= NVX_SCANLINE_LEFT_RIGHT;
+    if (config.SCANLINE_LEFT_RIGHT) scanline_mask |= NVX_SCANLINE_LEFT_RIGHT;
     if (config.SCANLINE_TOP_LEFT_BOTTOM_RIGHT)
       scanline_mask |= NVX_SCANLINE_TOP_LEFT_BOTTOM_RIGHT;
-    if (config.SCANLINE_TOP_BOTTOM)
-      scanline_mask |= NVX_SCANLINE_TOP_BOTTOM;
+    if (config.SCANLINE_TOP_BOTTOM) scanline_mask |= NVX_SCANLINE_TOP_BOTTOM;
     if (config.SCANLINE_TOP_RIGHT_BOTTOM_LEFT)
       scanline_mask |= NVX_SCANLINE_TOP_RIGHT_BOTTOM_LEFT;
-    if (config.SCANLINE_RIGHT_LEFT)
-      scanline_mask |= NVX_SCANLINE_RIGHT_LEFT;
+    if (config.SCANLINE_RIGHT_LEFT) scanline_mask |= NVX_SCANLINE_RIGHT_LEFT;
     if (config.SCANLINE_BOTTOM_RIGHT_TOP_LEFT)
       scanline_mask |= NVX_SCANLINE_BOTTOM_RIGHT_TOP_LEFT;
-    if (config.SCANLINE_BOTTOM_TOP)
-      scanline_mask |= NVX_SCANLINE_BOTTOM_TOP;
+    if (config.SCANLINE_BOTTOM_TOP) scanline_mask |= NVX_SCANLINE_BOTTOM_TOP;
     if (config.SCANLINE_BOTTOM_LEFT_TOP_RIGHT)
       scanline_mask |= NVX_SCANLINE_BOTTOM_LEFT_TOP_RIGHT;
   }
 
   int flags = 0;
-  if (config.FILTER_TOP_AREA)
-    flags |= NVX_SGM_FILTER_TOP_AREA;
-  if (config.PYRAMIDAL_STEREO)
-    flags |= NVX_SGM_PYRAMIDAL_STEREO;
+  if (config.FILTER_TOP_AREA) flags |= NVX_SGM_FILTER_TOP_AREA;
+  if (config.PYRAMIDAL_STEREO) flags |= NVX_SGM_PYRAMIDAL_STEREO;
 
   if (config.disparity_filter == VXSGBM_BilateralFilter) {
     ROS_INFO("Enabling bilateral filtering");
@@ -472,7 +464,7 @@ bool VXDisparityNodelet::update_stereo_matcher() {
   return true;
 }
 
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 // Register nodelet
 #include <pluginlib/class_list_macros.h>
