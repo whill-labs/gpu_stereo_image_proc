@@ -138,18 +138,8 @@ stereo_msgs::DisparityImagePtr disparityToDisparityImage(
 
   // We convert from fixed-point to float disparity and also adjust for any
   // x-offset between the principal points: d = d_fp*inv_dpp - (cx_l - cx_r)
-  if (!mask.empty()) {
-    cv::Mat masked_disparity;
-    disparity16.copyTo(masked_disparity, mask);
-
-    // \todo(amarburg)  Interestingly there doesn't seem to be a masked
-    // convertTo function..  could write one?
-    disparity16.convertTo(dmat, dmat.type(), inv_dpp,
-                          -(model.left().cx() - model.right().cx()));
-  } else {
-    disparity16.convertTo(dmat, dmat.type(), inv_dpp,
-                          -(model.left().cx() - model.right().cx()));
-  }
+  disparity16.convertTo(dmat, dmat.type(), inv_dpp,
+                        -(model.left().cx() - model.right().cx()));
   ROS_ASSERT(dmat.data == &dimage.data[0]);
   /// @todo is_bigendian? :)
 

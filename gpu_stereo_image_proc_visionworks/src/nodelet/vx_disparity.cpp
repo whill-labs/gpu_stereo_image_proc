@@ -277,8 +277,8 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
-  cv::Mat_<int16_t> disparityS16;
-  stereo_matcher_->compute(l_image, r_image, disparityS16);
+  stereo_matcher_->compute(l_image, r_image);
+  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
 
   if (debug_topics_) {
     DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
