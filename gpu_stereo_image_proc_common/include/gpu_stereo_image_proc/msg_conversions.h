@@ -17,6 +17,7 @@ class DisparityImageGenerator {
 
   private: 
     stereo_msgs::DisparityImagePtr disparity;
+    cv::Mat bad_disparity_mask_;
 };
 
 stereo_msgs::DisparityImagePtr

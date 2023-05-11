@@ -36,11 +36,13 @@ DisparityImageGenerator::DisparityImageGenerator (
   ROS_ASSERT(dmat.data == &dimage.data[0]);
   /// @todo is_bigendian? :)
 
-  cv::Mat bad_disparity_mask( dmat.size(), CV_8UC1);
-  cv::compare(dmat, min_disparity, bad_disparity_mask, cv::CMP_LT);
+  // Find all points with disparity less than min_disparity
+  bad_disparity_mask_ = cv::Mat( dmat.size(), CV_8UC1);
+  cv::compare(dmat, min_disparity, bad_disparity_mask_, cv::CMP_LT);
 
+  // Explicitly set those disparities to bad_disparity_value
   const float bad_disparity_value = 0.0;
-  dmat.setTo(bad_disparity_value, bad_disparity_mask);
+  dmat.setTo(bad_disparity_value, bad_disparity_mask_);
 
   const int left = max_disparity + border - 1;
   const int wtf = (min_disparity >= 0) ? border + min_disparity
@@ -96,6 +98,12 @@ sensor_msgs::ImagePtr DisparityImageGenerator::getDepth() {
   const float numerator = (disparity->f * disparity->T);
   cv::divide(numerator, dmat, depth_mat);
 
+  // Explicitly set all of the depths calculated from the bad disparities
+  // to bad_depth_value
+  const float bad_depth_value = std::numeric_limits<double>::quiet_NaN();
+  depth_mat.setTo(bad_depth_value, bad_disparity_mask_);
+
+  // Debug code to find and display the minimum and maximum disparities
   // {
   // cv::Mat zero_disparity_mask(dmat.size(), CV_8UC1);
   // cv::compare(dmat, 0, zero_disparity_mask, cv::CMP_NE);
