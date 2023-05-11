@@ -47,6 +47,7 @@
 #include <message_filters/synchronizer.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
+#include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
@@ -83,7 +84,8 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   // Publications
   boost::mutex connect_mutex_;
   ros::Publisher pub_disparity_, debug_lr_disparity_, debug_rl_disparity_;
-  ros::Publisher debug_disparity_mask_, pub_confidence_;
+  ros::Publisher debug_raw_disparity_, debug_disparity_mask_, pub_confidence_;
+  ros::Publisher pub_depth_;
 
   ros::Publisher scaled_left_camera_info_, scaled_right_camera_info_;
   ros::Publisher scaled_left_rect_;
@@ -176,6 +178,8 @@ void VXDisparityNodelet::onInit() {
     pub_disparity_ =
         nh.advertise<DisparityImage>("disparity", 1, connect_cb, connect_cb);
 
+    pub_depth_ = nh.advertise<Image>("depth", 1, connect_cb, connect_cb);
+
     pub_confidence_ =
         nh.advertise<Image>("confidence", 1, connect_cb, connect_cb);
 
@@ -188,9 +192,8 @@ void VXDisparityNodelet::onInit() {
       debug_rl_disparity_ =
           nh.advertise<DisparityImage>("debug/rl_disparity", 1);
 
-      // debug_raw_disparity_ =
-      //     nh.advertise<DisparityImage>("debug/raw_disparity", 1, connect_cb,
-      //     connect_cb);
+      debug_raw_disparity_ = nh.advertise<DisparityImage>(
+          "debug/raw_disparity", 1, connect_cb, connect_cb);
 
       debug_disparity_mask_ = nh.advertise<Image>("debug/confidence_mask", 1);
     }
@@ -207,8 +210,12 @@ void VXDisparityNodelet::onInit() {
 // Handles (un)subscribing when clients (un)subscribe
 void VXDisparityNodelet::connectCb() {
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
+
+  // If none of the relevant topics have subsubscribers, then we
+  // can relax...
   if ((pub_disparity_.getNumSubscribers() == 0) &&
-      (pub_confidence_.getNumSubscribers() == 0)) {
+      (pub_confidence_.getNumSubscribers() == 0) &&
+      (pub_depth_.getNumSubscribers() == 0)) {
     sub_l_image_.unsubscribe();
     sub_l_info_.unsubscribe();
     sub_r_image_.unsubscribe();
@@ -270,28 +277,31 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
-  stereo_matcher_->compute(l_image, r_image);
+  cv::Mat_<int16_t> disparityS16;
+  stereo_matcher_->compute(l_image, r_image, disparityS16);
 
-  cv::Mat confidence_mask;
+  if (debug_topics_) {
+    DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
+                                   min_disparity, max_disparity, border);
+    debug_raw_disparity_.publish(raw_dg.getDisparity());
+  }
 
   if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
           std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
               stereo_matcher_)) {
     // Publish confidence
-    const cv::Mat confidence(bm->confidenceMat());
-    // Convert confidence to 8UC1
-    cv::Mat confidence_8uc1(confidence.size(), CV_8UC1);
-    confidence.convertTo(confidence_8uc1, CV_8UC1);
-
-    cv_bridge::CvImage confidence_bridge(l_image_msg->header, "mono8",
-                                         confidence_8uc1);
+    cv::Mat confidence = bm->confidenceMat();
+    cv_bridge::CvImage confidence_bridge(l_image_msg->header, "32FC1",
+                                         confidence);
     pub_confidence_.publish(confidence_bridge.toImageMsg());
 
     if (confidence_threshold_ > 0) {
-      // Yes, filter on confidence
+      // Since we use the mask to **discard** disparities with low confidence,
+      // use CMP_LT to **set** pixels in the mask which have a confidence
+      // below the threshold.
       cv::Mat confidence_mask(confidence.size(), CV_8UC1, cv::Scalar(0));
-      cv::threshold(confidence_8uc1, confidence_mask, confidence_threshold_,
-                    255, cv::THRESH_BINARY);
+      cv::compare(confidence, confidence_threshold_, confidence_mask,
+                  cv::CMP_LT);
 
       if (debug_topics_) {
         cv_bridge::CvImage disparity_mask_bridge(l_image_msg->header, "mono8",
@@ -299,16 +309,17 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
         debug_disparity_mask_.publish(disparity_mask_bridge.toImageMsg());
       }
 
-      // cv::Mat masked_disparityS16;
-      // stereo_matcher_->disparity().copyTo(masked_disparityS16,
-      // confidence_mask);
+      // Erase disparity values with low confidence
+      const int masked_disparity_value = min_disparity;
+      disparityS16.setTo(masked_disparity_value, confidence_mask);
     }
   }
 
-  DisparityImagePtr masked_disp_msg = disparityToDisparityImage(
-      l_image_msg, stereo_matcher_->disparity(), scaled_model, min_disparity,
-      max_disparity, border, confidence_mask);
-  pub_disparity_.publish(masked_disp_msg);
+  DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
+                             min_disparity, max_disparity, border);
+
+  pub_disparity_.publish(dg.getDisparity());
+  pub_depth_.publish(dg.getDepth());
 
   scaled_left_camera_info_.publish(scaled_camera_info_l);
   scaled_right_camera_info_.publish(scaled_camera_info_r);
@@ -321,9 +332,10 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     // This results in an copy of the mat, so only do it if necessary..
     cv::Mat scaledDisparity = stereo_matcher_->unfilteredDisparityMat();
     if (!scaledDisparity.empty()) {
-      DisparityImagePtr lr_disp_msg =
-          disparityToDisparityImage(l_image_msg, scaledDisparity, scaled_model,
-                                    min_disparity, max_disparity, border);
+      DisparityImageGenerator lr_disp_dg(l_image_msg, scaledDisparity,
+                                         scaled_model, min_disparity,
+                                         max_disparity, border);
+      DisparityImagePtr lr_disp_msg = lr_disp_dg.getDisparity();
       debug_lr_disparity_.publish(lr_disp_msg);
     }
 
@@ -333,9 +345,10 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       // This results in an copy of the mat, so only do it if necessary..
       cv::Mat rlScaledDisparity = bm->RLDisparityMat();
       if (!rlScaledDisparity.empty()) {
-        DisparityImagePtr rl_disp_msg = disparityToDisparityImage(
-            l_image_msg, rlScaledDisparity, scaled_model, min_disparity,
-            max_disparity, border);
+        DisparityImageGenerator rl_disp_dg(l_image_msg, rlScaledDisparity,
+                                           scaled_model, min_disparity,
+                                           max_disparity, border);
+        DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
         debug_rl_disparity_.publish(rl_disp_msg);
       }
     }
