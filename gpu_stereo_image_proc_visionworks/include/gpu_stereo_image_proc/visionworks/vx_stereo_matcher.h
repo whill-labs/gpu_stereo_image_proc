@@ -49,11 +49,25 @@ class VXStereoMatcher : public VXStereoMatcherBase {
 
   virtual ~VXStereoMatcher();
 
-  void compute(cv::InputArray left, cv::InputArray right,
-               cv::OutputArray disparity) override;
+  void compute(cv::InputArray left, cv::InputArray right) override;
+
+  cv::Mat disparity() const override {
+    if (params_.filtering == VXStereoMatcherParams::Filtering_Bilateral) {
+      // I suspect this is inefficient...
+      cv::Mat out;
+      g_filtered_.download(out);
+      return out;
+    } else {
+      // Call the super
+      return VXStereoMatcherBase::disparity();
+    }
+  }
 
  protected:
   // noncopyable
   VXStereoMatcher(const VXStereoMatcher &) = delete;
   VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;
+
+  // GpuMat which stores the result **if** filtering is enabled
+  cv::cuda::GpuMat g_filtered_;
 };

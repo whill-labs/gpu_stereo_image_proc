@@ -136,10 +136,7 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
 VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
 
 void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
-                                           cv::InputArray right,
-                                           cv::OutputArray disparity) {
-  //   left_image_ =  nvx_cv::createVXImageFromCVMat(context_, left.getMat());
-  //   right_image_ = nvx_cv::createVXImageFromCVMat(context_, right.getMat());
+                                           cv::InputArray right) {
   copy_to_vx_image(left, left_image_);
   copy_to_vx_image(right, right_image_);
 
@@ -147,9 +144,6 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
   ROS_ASSERT(status == VX_SUCCESS);
 
   if (params_.filtering == VXStereoMatcherParams::Filtering_WLS_LeftRight) {
-    // This algorithm works on the **scaled** image
-    // cv::Mat flipped_rl_disparity_mat, rl_disparity_mat, lr_disparity_mat;
-
     cv::Mat rl_disparity;
 
     nvx_cv::VXImageToCVMatMapper lr_disparity_map(
@@ -171,9 +165,12 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
     // matcher to initialize the WLS filter
     //
     // These are the only params used to initialize the WLS filter...
+    //
+    // \todo These probably only need to be created once in the constructor (?)
     cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(
         params_.min_disparity, (params_.max_disparity - params_.min_disparity),
         params_.sad_win_size);
+
     cv ::Ptr<cv::ximgproc::DisparityWLSFilter> wls =
         cv::ximgproc::createDisparityWLSFilter(sgbm);
     wls->setLambda(params_.wls_filter_params.lambda);
@@ -187,14 +184,17 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
                 rl_disparity, roi, right_map.getMat());
 
     confidence_ = wls->getConfidenceMap();
-    disparity.assign(filter_output_);
   } else {
     ROS_WARN(
         "In VXBidirectionalStereoMatcher but not doing WLSFiltering;  "
         "this shouldn't happen.");
 
-    nvx_cv::VXImageToCVMatMapper disparity_map(
-        disparity_, 0, NULL, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
-    disparity_map.getMat().copyTo(disparity);
+    // Do the inefficient thing and copy it to filter_output_ to simplify the
+    // disparity() function.
+    //
+    // We should never be here regardless
+    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
+                                     VX_MEMORY_TYPE_HOST);
+    map.getMat().copyTo(filter_output_);
   }
 }

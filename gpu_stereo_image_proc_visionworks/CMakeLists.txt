@@ -68,10 +68,12 @@ install(FILES nodelet_plugins.xml
 )
 
 # Standalone node
-add_executable(vx_stereoimageproc_exe src/node/vx_stereo_image_proc.cpp)
-target_link_libraries(vx_stereoimageproc_exe ${VX_NODELET_NAME})
-SET_TARGET_PROPERTIES(vx_stereoimageproc_exe PROPERTIES OUTPUT_NAME vx_${PROJECT_NAME})
-install(TARGETS vx_stereoimageproc_exe
+set(VX_NODE_NAME vx_stereo_image_proc_node)
+add_executable(${VX_NODE_NAME} src/node/vx_stereo_image_proc.cpp)
+target_link_libraries(${VX_NODE_NAME} ${VX_NODELET_NAME})
+
+# Install binaries
+install(TARGETS ${VX_NODE_NAME}
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

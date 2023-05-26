@@ -49,17 +49,16 @@ class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
 
   ~VXBidirectionalStereoMatcher();
 
-  void compute(cv::InputArray left, cv::InputArray right,
-               cv::OutputArray disparity) override;
+  void compute(cv::InputArray left, cv::InputArray right) override;
+
+  cv::Mat disparity() const override { return filter_output_; }
 
   cv::Mat confidenceMat() const { return confidence_; }
 
   cv::Mat RLDisparityMat() const {
-    cv::Mat output;
     nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_, 0, NULL,
                                      VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
-    map.getMat().copyTo(output);
-    return output;
+    return map.getMat();
   }
 
  private:

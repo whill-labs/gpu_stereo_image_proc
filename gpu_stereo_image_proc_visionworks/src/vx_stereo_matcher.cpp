@@ -89,8 +89,7 @@ VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
 
 VXStereoMatcher::~VXStereoMatcher() {}
 
-void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
-                              cv::OutputArray disparity) {
+void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right) {
   //  left_image_ = 	nvx_cv::createVXImageFromCVMat(context_, left.getMat());
   //  right_image_ = 	nvx_cv::createVXImageFromCVMat(context_,
   //  right.getMat());
@@ -105,8 +104,6 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
     const int radius = 3;
     const int iters = 1;
 
-    cv::cuda::GpuMat g_filtered;
-
     nvx_cv::VXImageToCVMatMapper disparity_map(
         disparity_, 0, NULL, VX_READ_ONLY, NVX_MEMORY_TYPE_CUDA);
     nvx_cv::VXImageToCVMatMapper left_map(left_scaled_, 0, NULL, VX_READ_ONLY,
@@ -116,12 +113,6 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right,
         cv::cuda::createDisparityBilateralFilter(nDisp, radius, iters);
 
     pCudaBilFilter->apply(disparity_map.getGpuMat(), left_map.getGpuMat(),
-                          g_filtered);
-    g_filtered.download(disparity);
-  } else {
-    // No filtering, just use the scaled disparity
-    nvx_cv::VXImageToCVMatMapper disparity_map(
-        disparity_, 0, NULL, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
-    disparity_map.getMat().copyTo(disparity);
+                          g_filtered_);
   }
 }

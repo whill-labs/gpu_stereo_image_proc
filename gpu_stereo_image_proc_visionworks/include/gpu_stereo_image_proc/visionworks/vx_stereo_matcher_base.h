@@ -51,8 +51,7 @@ class VXStereoMatcherBase {
 
   virtual ~VXStereoMatcherBase();
 
-  virtual void compute(cv::InputArray left, cv::InputArray right,
-                       cv::OutputArray disparity) = 0;
+  virtual void compute(cv::InputArray left, cv::InputArray right) = 0;
 
   const VXStereoMatcherParams &params() const { return params_; }
 
@@ -60,8 +59,25 @@ class VXStereoMatcherBase {
     cv::Mat output;
     nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
                                      VX_MEMORY_TYPE_HOST);
-    map.getMat().copyTo(output);
-    return output;
+    return map.getMat();
+  }
+
+  cv::Mat scaledLeftRect() const {
+    if (params().downsample != 1) {
+      nvx_cv::VXImageToCVMatMapper map(left_scaled_, 0, NULL, VX_READ_ONLY,
+                                       VX_MEMORY_TYPE_HOST);
+      return map.getMat();
+    } else {
+      nvx_cv::VXImageToCVMatMapper map(left_image_, 0, NULL, VX_READ_ONLY,
+                                       VX_MEMORY_TYPE_HOST);
+      return map.getMat();
+    }
+  }
+
+  virtual cv::Mat disparity() const {
+    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
+                                     VX_MEMORY_TYPE_HOST);
+    return map.getMat();
   }
 
  protected:

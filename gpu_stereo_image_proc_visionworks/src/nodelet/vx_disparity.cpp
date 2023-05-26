@@ -135,6 +135,8 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 };
 
 void VXDisparityNodelet::onInit() {
+  // Use the single-threaded model.   There are really only two callbacks:
+  // config and new images.  Don't want to have to deconflict those
   ros::NodeHandle &nh = getNodeHandle();
   ros::NodeHandle &private_nh = getPrivateNodeHandle();
 
@@ -270,12 +272,13 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 
   const auto scaled_camera_info_l(scaleCameraInfo(l_info_msg, downsample));
   const auto scaled_camera_info_r(scaleCameraInfo(r_info_msg, downsample));
+
   image_geometry::StereoCameraModel scaled_model;
   scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
-  cv::Mat_<int16_t> disparityS16;
-  stereo_matcher_->compute(l_image, r_image, disparityS16);
+  stereo_matcher_->compute(l_image, r_image);
+  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
 
   if (debug_topics_) {
     DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
@@ -321,13 +324,8 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   scaled_left_camera_info_.publish(scaled_camera_info_l);
   scaled_right_camera_info_.publish(scaled_camera_info_r);
 
-  // Mildly inefficient but good for now...
-  // I need a scaled rectified image for point cloud coloring
-  cv::Mat scaledLeftRect;
-  cv::resize(l_image, scaledLeftRect, cv::Size(), 1.0 / downsample,
-             1.0 / downsample);
   cv_bridge::CvImage left_rect_msg_bridge(l_image_msg->header, "mono8",
-                                          scaledLeftRect);
+                                          stereo_matcher_->scaledLeftRect());
   scaled_left_rect_.publish(left_rect_msg_bridge.toImageMsg());
 
   if (debug_topics_) {
