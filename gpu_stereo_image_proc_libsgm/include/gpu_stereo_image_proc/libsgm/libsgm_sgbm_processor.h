@@ -39,7 +39,7 @@
 
 namespace gpu_stereo_image_proc {
 class LibSGMStereoSGBMProcessor : public StereoSGBMProcessor {
-public:
+ public:
   LibSGMStereoSGBMProcessor() {
     stereo_matcher_.reset(new sgm::LibSGMWrapper(disparity_range_, P1_, P2_,
                                                  uniqueness_ratio_, true));
@@ -74,8 +74,7 @@ public:
   }
 
   bool setUniquenessRatio(float ratio) {
-    if (ratio < 0.0 || ratio > 100.0)
-      return false;
+    if (ratio < 0.0 || ratio > 100.0) return false;
     uniqueness_ratio_ = (100.0 - ratio) / 100.0;
     return true;
   }
@@ -100,41 +99,41 @@ public:
 
   int getPathType() const {
     switch (path_type_) {
-    case sgm::PathType::SCAN_4PATH:
-      return 0;
-      break;
-    case sgm::PathType::SCAN_8PATH:
-      return 1;
-      break;
-    default:
-      return -1;
-      break;
+      case sgm::PathType::SCAN_4PATH:
+        return 0;
+        break;
+      case sgm::PathType::SCAN_8PATH:
+        return 1;
+        break;
+      default:
+        return -1;
+        break;
     }
   }
 
   bool setPathType(int path_type) {
     bool ret = true;
     switch (path_type) {
-    case 0:
-      path_type_ = sgm::PathType::SCAN_4PATH;
-      break;
-    case 1:
-      path_type_ = sgm::PathType::SCAN_8PATH;
-      break;
-    default:
-      ret = false;
-      break;
+      case 0:
+        path_type_ = sgm::PathType::SCAN_4PATH;
+        break;
+      case 1:
+        path_type_ = sgm::PathType::SCAN_8PATH;
+        break;
+      default:
+        ret = false;
+        break;
     }
     return ret;
   }
 
-private:
+ private:
   std::shared_ptr<sgm::LibSGMWrapper> stereo_matcher_;
 
   float uniqueness_ratio_;
   sgm::PathType path_type_;
 };
 
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 #endif

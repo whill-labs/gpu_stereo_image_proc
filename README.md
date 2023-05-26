@@ -1,4 +1,4 @@
-# gpu_stereo_image_proc 
+# gpu_stereo_image_proc
 
 ## Overview
 
@@ -11,7 +11,7 @@ With stubs for an OpenCV-based nodelet in process.
 
 This version is based on [whill-lab's](https://github.com/whill-labs) [upstream package](https://github.com/whill-labs/gpu_stereo_image_proc), but has diverged significantly in structure.
 
-Each algorithm is in its own ROS package so individual packages can be disabled by adding them to the [Catkin blocklist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#whitelisting-and-blacklisting-packages). 
+Each algorithm is in its own ROS package so individual packages can be disabled by adding them to the [Catkin blocklist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#whitelisting-and-blacklisting-packages).
 
 As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x.   It also assumes the Trisect's customized [OpenCV](https://gitlab.com/apl-ocean-engineering/jetson/buildopencv) and [ROS](https://gitlab.com/apl-ocean-engineering/jetson/buildros1) builds.
 

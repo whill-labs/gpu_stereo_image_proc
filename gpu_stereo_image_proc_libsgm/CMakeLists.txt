@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(gpu_stereo_image_proc_libsgm)
 
-find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_proc image_transport 
+find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_proc image_transport
                 message_filters nodelet sensor_msgs stereo_msgs gpu_stereo_image_proc_common)
 find_package(Boost REQUIRED COMPONENTS thread)
 
@@ -25,7 +25,7 @@ catkin_package(
 
 include_directories(include)
 
-find_package(OpenCV 4 REQUIRED) 
+find_package(OpenCV 4 REQUIRED)
 include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 find_package(CUDA REQUIRED)
@@ -64,7 +64,7 @@ add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 
 set(LIBSGM_NODELET_NAME libsgm_stereo_image_proc)
 add_library(${LIBSGM_NODELET_NAME}
-            src/libgpu_stereo_image_proc_libsgm/libsgm_sgbm_processor.cpp 
+            src/libgpu_stereo_image_proc_libsgm/libsgm_sgbm_processor.cpp
             src/nodelet/libsgm_disparity.cpp)
 target_link_libraries(${LIBSGM_NODELET_NAME} ${catkin_LIBRARIES}
                                              ${OpenCV_LIBRARIES}

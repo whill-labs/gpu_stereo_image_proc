@@ -36,6 +36,9 @@
 #include <boost/thread/lock_guard.hpp>
 #endif
 
+#include <cv_bridge/cv_bridge.h>
+#include <dynamic_reconfigure/server.h>
+#include <image_geometry/stereo_camera_model.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/subscriber.h>
@@ -44,18 +47,13 @@
 #include <message_filters/synchronizer.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
-
-#include <cv_bridge/cv_bridge.h>
-#include <image_geometry/stereo_camera_model.h>
-#include <opencv2/calib3d/calib3d.hpp>
-
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
 
-#include "gpu_stereo_image_proc_libsgm/LIBSGMConfig.h"
-#include <dynamic_reconfigure/server.h>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include "gpu_stereo_image_proc/libsgm/libsgm_sgbm_processor.h"
+#include "gpu_stereo_image_proc_libsgm/LIBSGMConfig.h"
 
 namespace gpu_stereo_image_proc {
 using namespace sensor_msgs;
@@ -88,7 +86,7 @@ class LibSGMDisparityNodelet : public nodelet::Nodelet {
   // Processing state (note: only safe because we're single-threaded!)
   image_geometry::StereoCameraModel model_;
   gpu_stereo_image_proc::LibSGMStereoSGBMProcessor
-      block_matcher_; // contains scratch buffers for block matching
+      block_matcher_;  // contains scratch buffers for block matching
 
   virtual void onInit();
 
@@ -222,7 +220,7 @@ void LibSGMDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 void LibSGMDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Tweak all settings to be valid
   config.disparity_range =
-      (config.disparity_range / 16) * 16; // must be multiple of 16
+      (config.disparity_range / 16) * 16;  // must be multiple of 16
 
   // check stereo method
   // Note: With single-threaded NodeHandle, configCb and imageCb can't be called
@@ -237,7 +235,7 @@ void LibSGMDisparityNodelet::configCb(Config &config, uint32_t level) {
   block_matcher_.applyConfig();
 }
 
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc
 
 // Register nodelet
 #include <pluginlib/class_list_macros.h>

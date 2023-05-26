@@ -32,10 +32,12 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 #include "gpu_stereo_image_proc/sgbm_processor.h"
-#include <cmath>
-#include <limits>
+
 #include <ros/assert.h>
 #include <sensor_msgs/image_encodings.h>
+
+#include <cmath>
+#include <limits>
 
 namespace gpu_stereo_image_proc {
 using ImageProcFlag = StereoSGBMProcessor::ImageProcFlag;
@@ -93,8 +95,7 @@ void StereoSGBMProcessor::disparityToDisparityImage(
     const cv::Mat_<int16_t> disparity16,
     const image_geometry::StereoCameraModel &model,
     stereo_msgs::DisparityImage &disparity) const {
-
-  const int DPP = 16; // disparities per pixel
+  const int DPP = 16;  // disparities per pixel
   const double inv_dpp = static_cast<double>(shrink_scale_) / DPP;
 
   // Fill in DisparityImage image data, converting to 32-bit float
@@ -365,4 +366,4 @@ inline bool isValidPoint(const cv::Vec3f &pt) {
 //     encoding '%s'", encoding.c_str());
 //   }
 // }
-} // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc

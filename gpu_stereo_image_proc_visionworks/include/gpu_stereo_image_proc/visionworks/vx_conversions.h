@@ -35,20 +35,21 @@
 
 // #include <iostream>
 #include <VX/vx.h>
-#include <opencv2/core.hpp>
 #include <ros/ros.h>
 
-#define VX_CHECK_STATUS(s)                                                     \
-  do {                                                                         \
-    const auto status = (s);                                                   \
-    if (status != VX_SUCCESS) {                                                \
-      ROS_ERROR("VX ERROR (%d): %d", __LINE__, status);                        \
-    }                                                                          \
-    ROS_ASSERT(status == VX_SUCCESS);                                          \
+#include <opencv2/core.hpp>
+
+#define VX_CHECK_STATUS(s)                              \
+  do {                                                  \
+    const auto status = (s);                            \
+    if (status != VX_SUCCESS) {                         \
+      ROS_ERROR("VX ERROR (%d): %d", __LINE__, status); \
+    }                                                   \
+    ROS_ASSERT(status == VX_SUCCESS);                   \
   } while (false)
 
 // using std::cout;
 // using std::endl;
 
 void copy_to_vx_image(cv::InputArray src, vx_image dest);
-//void copy_from_vx_image(vx_image src, cv::OutputArray dest);
+// void copy_from_vx_image(vx_image src, cv::OutputArray dest);
