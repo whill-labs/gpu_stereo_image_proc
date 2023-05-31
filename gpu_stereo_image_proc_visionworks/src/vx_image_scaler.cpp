@@ -84,7 +84,7 @@ vx_image VxGaussianImageScaler::addToGraph(vx_context context, vx_graph graph,
   output_size_.width = layer_width;
   output_size_.height = layer_height;
 
-  return input;
+  return images_.back();
 }
 
 }  // namespace gpu_stereo_image_proc_visionworks
