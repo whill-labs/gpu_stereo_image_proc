@@ -31,8 +31,7 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef VX_STEREO_MATCHER_H
-#define VX_STEREO_MATCHER_H
+#pragma once
 
 #include <NVX/nvx.h>
 #include <VX/vx.h>
@@ -42,9 +41,10 @@
 
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
 
+namespace gpu_stereo_image_proc_visionworks {
+
 class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
  public:
-  VXBidirectionalStereoMatcher();
   VXBidirectionalStereoMatcher(const VXStereoMatcherParams &params);
 
   ~VXBidirectionalStereoMatcher();
@@ -73,10 +73,13 @@ class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
     int lrc_threshold;
   } _wls_params;
 
+ protected:
+  VXBidirectionalStereoMatcher() = delete;
+
   // This class is non-copyable
   VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;
   VXBidirectionalStereoMatcher &operator=(
       const VXBidirectionalStereoMatcher &) = delete;
 };
 
-#endif
+}  // namespace gpu_stereo_image_proc_visionworks

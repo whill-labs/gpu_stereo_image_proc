@@ -1,7 +1,5 @@
 /*********************************************************************
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2019, WHILL, Inc.
+ *  Copyright (c) 2023 University of Washington
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,46 +31,53 @@
  *********************************************************************/
 #pragma once
 
+#include <vector>
+
+// For cv::Size
 #include <NVX/nvx.h>
 #include <VX/vx.h>
 #include <VX/vxu.h>
-#include <ros/ros.h>
 
 #include <opencv2/core.hpp>
 
-#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
-
 namespace gpu_stereo_image_proc_visionworks {
 
-class VXStereoMatcher : public VXStereoMatcherBase {
+class VxImageScaler {
  public:
-  VXStereoMatcher(const VXStereoMatcherParams &params);
+  VxImageScaler(unsigned int downsample_log2)
+      : downsample_log2_(downsample_log2) {}
 
-  virtual ~VXStereoMatcher();
+  virtual vx_image addToGraph(vx_context context, vx_graph graph,
+                              vx_image input) = 0;
 
-  void compute(cv::InputArray left, cv::InputArray right) override;
+  int downsample() const { return 2 ^ downsample_log2_; }
 
-  cv::Mat disparity() const override {
-    if (params_.filtering == VXStereoMatcherParams::Filtering_Bilateral) {
-      // I suspect this is inefficient...
-      cv::Mat out;
-      g_filtered_.download(out);
-      return out;
-    } else {
-      // Call the super
-      return VXStereoMatcherBase::disparity();
-    }
+  const cv::Size outputSize() const { return output_size_; }
+
+  unsigned int downsample_log2_;
+  cv::Size output_size_;
+
+  // The class is non-copyable
+  VxImageScaler(const VxImageScaler &) = delete;
+  VxImageScaler &operator=(const VxImageScaler &) = delete;
+};
+
+class VxGaussianImageScaler : public VxImageScaler {
+ public:
+  VxGaussianImageScaler(unsigned int downsample_log2)
+      : VxImageScaler(downsample_log2), images_(downsample_log2) {
+    ;
   }
 
- protected:
-  VXStereoMatcher() = delete;
+  vx_image addToGraph(vx_context context, vx_graph graph,
+                      vx_image input) override;
 
-  // noncopyable
-  VXStereoMatcher(const VXStereoMatcher &) = delete;
-  VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;
+  // This class operates by factors of 2, so it needs the whole pyramid
+  std::vector<vx_image> images_;
 
-  // GpuMat which stores the result **if** filtering is enabled
-  cv::cuda::GpuMat g_filtered_;
+  // The class is non-copyable
+  VxGaussianImageScaler(const VxGaussianImageScaler &) = delete;
+  VxGaussianImageScaler &operator=(const VxGaussianImageScaler &) = delete;
 };
 
 }  // namespace gpu_stereo_image_proc_visionworks

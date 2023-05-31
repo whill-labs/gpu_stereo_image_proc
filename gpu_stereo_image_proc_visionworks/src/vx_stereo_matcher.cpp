@@ -44,13 +44,13 @@
 
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 
-VXStereoMatcher::VXStereoMatcher() : VXStereoMatcherBase() {}
+namespace gpu_stereo_image_proc_visionworks {
 
 VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
     : VXStereoMatcherBase(params) {
   vx_status status;
 
-  if (params.downsample > 1) {
+  if (params.downsample_log2 > 0) {
     // left_scaled_ = vxCreateImage( context_,
     //     params.scaled_image_size().width, params.scaled_image_size().height,
     //     VX_DF_IMAGE_U8);
@@ -116,3 +116,5 @@ void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right) {
                           g_filtered_);
   }
 }
+
+}  // namespace gpu_stereo_image_proc_visionworks

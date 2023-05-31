@@ -33,6 +33,8 @@
  *********************************************************************/
 #pragma once
 
+namespace gpu_stereo_image_proc_visionworks {
+
 struct VXStereoMatcherParams {
  public:
   enum DisparityFiltering_t {
@@ -43,7 +45,7 @@ struct VXStereoMatcherParams {
   };
 
   VXStereoMatcherParams()
-      : downsample(2),
+      : downsample_log2(0),
         min_disparity(0),
         max_disparity(64),
         P1(8),
@@ -64,11 +66,13 @@ struct VXStereoMatcherParams {
 
   const cv::Size image_size() const { return _image_size; }
   const cv::Size scaled_image_size() const {
-    return cv::Size(_image_size.width / downsample,
-                    _image_size.height / downsample);
+    return cv::Size(_image_size.width >> downsample_log2,
+                    _image_size.height >> downsample_log2);
   }
 
-  int downsample;
+  int downsample() const { return (1 << downsample_log2); }
+
+  int downsample_log2;
   int min_disparity;
   int max_disparity;
 
@@ -106,7 +110,7 @@ struct VXStereoMatcherParams {
     ROS_INFO("===================================");
     ROS_INFO("image_size  : w %d, h %d", image_size().width,
              image_size().height);
-    ROS_INFO("downsample  : %d", downsample);
+    ROS_INFO("downsample  : %d", downsample());
     ROS_INFO("Uniqueness  : %d", uniqueness_ratio);
     ROS_INFO("Max Diff    : %d", max_diff);
     ROS_INFO("P1/P2       : P1 %d, P2 %d", P1, P2);
@@ -153,3 +157,5 @@ struct VXStereoMatcherParams {
   // if (ratio < 0.0 || ratio > 100.0)
   //   return false;
 };
+
+}  // namespace gpu_stereo_image_proc_visionworks
