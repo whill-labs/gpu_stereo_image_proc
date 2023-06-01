@@ -34,8 +34,7 @@
 
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 
-using std::cout;
-using std::endl;
+#include <NVX/nvx_opencv_interop.hpp>
 
 void copy_to_vx_image(cv::InputArray src, vx_image dest) {
   cv::Mat src_mat = src.getMat();
@@ -61,4 +60,10 @@ void copy_to_vx_image(cv::InputArray src, vx_image dest) {
   const auto status = vxCopyImagePatch(dest, &rect, 0, &addr, src_mat.data,
                                        VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
   // ROS_ASSERT(status == VX_SUCCESS);
+}
+
+cv::Mat vxImageToMatWrapper(vx_image image) {
+  nvx_cv::VXImageToCVMatMapper map(image, 0, NULL, VX_READ_ONLY,
+                                   VX_MEMORY_TYPE_HOST);
+  return map.getMat();
 }

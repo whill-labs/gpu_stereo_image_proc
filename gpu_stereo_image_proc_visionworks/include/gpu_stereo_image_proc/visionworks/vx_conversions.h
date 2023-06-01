@@ -48,8 +48,6 @@
     ROS_ASSERT(status == VX_SUCCESS);                   \
   } while (false)
 
-// using std::cout;
-// using std::endl;
-
 void copy_to_vx_image(cv::InputArray src, vx_image dest);
-// void copy_from_vx_image(vx_image src, cv::OutputArray dest);
+
+cv::Mat vxImageToMatWrapper(vx_image image);

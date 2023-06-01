@@ -38,15 +38,17 @@
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
-#include <NVX/nvx_opencv_interop.hpp>
+#include <memory>
 #include <opencv2/core.hpp>
 
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_image_scaler.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_params.h"
+
+namespace gpu_stereo_image_proc_visionworks {
 
 class VXStereoMatcherBase {
  public:
-  VXStereoMatcherBase();
-
   VXStereoMatcherBase(const VXStereoMatcherParams &params);
 
   virtual ~VXStereoMatcherBase();
@@ -56,43 +58,38 @@ class VXStereoMatcherBase {
   const VXStereoMatcherParams &params() const { return params_; }
 
   cv::Mat unfilteredDisparityMat() const {
-    cv::Mat output;
-    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
-                                     VX_MEMORY_TYPE_HOST);
-    return map.getMat();
+    return vxImageToMatWrapper(disparity_);
   }
 
-  cv::Mat scaledLeftRect() const {
-    if (params().downsample != 1) {
-      nvx_cv::VXImageToCVMatMapper map(left_scaled_, 0, NULL, VX_READ_ONLY,
-                                       VX_MEMORY_TYPE_HOST);
-      return map.getMat();
-    } else {
-      nvx_cv::VXImageToCVMatMapper map(left_image_, 0, NULL, VX_READ_ONLY,
-                                       VX_MEMORY_TYPE_HOST);
-      return map.getMat();
-    }
-  }
+  cv::Mat scaledLeftRect() const { return vxImageToMatWrapper(left_scaled_); }
 
-  virtual cv::Mat disparity() const {
-    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
-                                     VX_MEMORY_TYPE_HOST);
-    return map.getMat();
-  }
+  virtual cv::Mat disparity() const { return vxImageToMatWrapper(disparity_); }
 
  protected:
   vx_context context_;
   vx_graph graph_;
+
+  // Input images
   vx_image left_image_;
   vx_image right_image_;
 
+  // Scaled images (equal to {left|right}_image_ if not scaling)
   vx_image left_scaled_;
   vx_image right_scaled_;
+
+  // Output images
   vx_image disparity_;
 
   VXStereoMatcherParams params_;
+
+  std::unique_ptr<VxImageScaler> left_scaler_, right_scaler_;
+
+  // No default constructor
+  VXStereoMatcherBase() = delete;
 
   // noncopyable
   VXStereoMatcherBase(const VXStereoMatcherBase &) = delete;
   VXStereoMatcherBase &operator=(const VXStereoMatcherBase &) = delete;
 };
+
+}  // namespace gpu_stereo_image_proc_visionworks

@@ -52,6 +52,7 @@ add_library(${VX_NODELET_NAME}
             src/vx_stereo_matcher_base.cpp
             src/vx_stereo_matcher.cpp
             src/vx_bidirectional_stereo_matcher.cpp
+            src/vx_image_scaler.cpp
             src/vx_conversions.cpp
             src/nodelet/vx_disparity.cpp)
 target_link_libraries(${VX_NODELET_NAME} ${catkin_LIBRARIES}

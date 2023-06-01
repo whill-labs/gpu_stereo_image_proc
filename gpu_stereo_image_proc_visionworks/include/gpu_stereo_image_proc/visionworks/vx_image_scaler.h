@@ -1,7 +1,5 @@
 /*********************************************************************
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2019, WHILL, Inc.
+ *  Copyright (c) 2023 University of Washington
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,51 +31,58 @@
  *********************************************************************/
 #pragma once
 
+#include <vector>
+
+// For cv::Size
 #include <NVX/nvx.h>
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
 #include <opencv2/core.hpp>
 
-#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
-
 namespace gpu_stereo_image_proc_visionworks {
 
-class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
+class VxImageScaler {
  public:
-  VXBidirectionalStereoMatcher(const VXStereoMatcherParams &params);
+  VxImageScaler(unsigned int downsample_log2);
 
-  ~VXBidirectionalStereoMatcher();
+  virtual vx_image addToGraph(vx_context context, vx_graph graph,
+                              vx_image input) = 0;
 
-  void compute(cv::InputArray left, cv::InputArray right) override;
+  int downsample() const { return 2 ^ downsample_log2_; }
 
-  cv::Mat disparity() const override { return filter_output_; }
+  // Note outputSize() is not set until addToGraph is called
+  const cv::Size outputSize() const { return output_size_; }
 
-  cv::Mat confidenceMat() const { return confidence_; }
+  unsigned int downsample_log2_;
 
-  cv::Mat RLDisparityMat() const {
-    return vxImageToMatWrapper(flipped_rl_disparity_);
-  }
-
- private:
-  vx_image flipped_left_;
-  vx_image flipped_right_;
-  vx_image flipped_rl_disparity_;
-
-  cv::Mat filter_output_, confidence_;
-
-  struct WLSParameters {
-    double lambda;
-    int lrc_threshold;
-  } _wls_params;
+ protected:
+  cv::Size output_size_;
 
   // No default constructor
-  VXBidirectionalStereoMatcher() = delete;
+  VxImageScaler() = delete;
+  // The class is non-copyable
+  VxImageScaler(const VxImageScaler &) = delete;
+  VxImageScaler &operator=(const VxImageScaler &) = delete;
+};
 
-  // This class is non-copyable
-  VXBidirectionalStereoMatcher(const VXBidirectionalStereoMatcher &) = delete;
-  VXBidirectionalStereoMatcher &operator=(
-      const VXBidirectionalStereoMatcher &) = delete;
+class VxGaussianImageScaler : public VxImageScaler {
+ public:
+  VxGaussianImageScaler(unsigned int downsample_log2);
+
+  vx_image addToGraph(vx_context context, vx_graph graph,
+                      vx_image input) override;
+
+ protected:
+  // This class downsamples using a Visionworks call which halves image size,
+  // so we maintain a pyramid of intermediate images
+  std::vector<vx_image> images_;
+
+  // No default constructor
+  VxGaussianImageScaler() = delete;
+  // The class is non-copyable
+  VxGaussianImageScaler(const VxGaussianImageScaler &) = delete;
+  VxGaussianImageScaler &operator=(const VxGaussianImageScaler &) = delete;
 };
 
 }  // namespace gpu_stereo_image_proc_visionworks

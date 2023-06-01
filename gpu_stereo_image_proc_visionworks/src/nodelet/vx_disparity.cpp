@@ -62,7 +62,7 @@
 #include "gpu_stereo_image_proc_common/DisparityWLSFilterConfig.h"
 #include "gpu_stereo_image_proc_visionworks/VXSGBMConfig.h"
 
-namespace gpu_stereo_image_proc {
+namespace gpu_stereo_image_proc_visionworks {
 using namespace sensor_msgs;
 using namespace stereo_msgs;
 using namespace message_filters::sync_policies;
@@ -92,7 +92,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
 
   // Dynamic reconfigure
   boost::recursive_mutex config_mutex_;
-  typedef gpu_stereo_image_proc::VXSGBMConfig Config;
+  typedef VXSGBMConfig Config;
   typedef dynamic_reconfigure::Server<Config> ReconfigureServer;
   boost::shared_ptr<ReconfigureServer> reconfigure_server_;
 
@@ -267,7 +267,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   // Pull in some parameters as constants
   const int min_disparity = stereo_matcher_->params().min_disparity;
   const int max_disparity = stereo_matcher_->params().max_disparity;
-  const int downsample = stereo_matcher_->params().downsample;
+  const int downsample = stereo_matcher_->params().downsample();
   const int border = stereo_matcher_->params().sad_win_size / 2;
 
   const auto scaled_camera_info_l(scaleCameraInfo(l_info_msg, downsample));
@@ -353,7 +353,7 @@ void VXDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
       }
     }
   }
-}  // namespace gpu_stereo_image_proc
+}
 
 void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Settings for the nodelet itself
@@ -362,8 +362,6 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Tweak all settings to be valid
   config.correlation_window_size |= 0x1;  // must be odd
   config.max_disparity = (config.max_disparity / 4) * 4;
-  config.downsample =
-      static_cast<int>(pow(2, static_cast<int>(log2(config.downsample))));
 
   int scanline_mask = 0;
   if (config.path_type == VXSGBM_SCANLINE_ALL) {
@@ -418,7 +416,7 @@ void VXDisparityNodelet::configCb(Config &config, uint32_t level) {
   params_.hc_win_size = config.hc_win_size;
   params_.flags = flags;
   params_.scanline_mask = scanline_mask;
-  params_.downsample = config.downsample;
+  params_.downsample_log2 = config.downsample;
 
   update_stereo_matcher();
 }
@@ -462,9 +460,9 @@ bool VXDisparityNodelet::update_stereo_matcher() {
   return true;
 }
 
-}  // namespace gpu_stereo_image_proc
+}  // namespace gpu_stereo_image_proc_visionworks
 
 // Register nodelet
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(gpu_stereo_image_proc::VXDisparityNodelet,
+PLUGINLIB_EXPORT_CLASS(gpu_stereo_image_proc_visionworks::VXDisparityNodelet,
                        nodelet::Nodelet)

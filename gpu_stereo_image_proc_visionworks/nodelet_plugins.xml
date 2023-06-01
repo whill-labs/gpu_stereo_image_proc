@@ -1,6 +1,6 @@
 <library path="lib/libvx_stereo_image_proc">
 
-  <class name="gpu_stereo_image_proc_visionworks/vx_disparity" type="gpu_stereo_image_proc::VXDisparityNodelet" base_class_type="nodelet::Nodelet">
+  <class name="gpu_stereo_image_proc_visionworks/vx_disparity" type="gpu_stereo_image_proc_visionworks::VXDisparityNodelet" base_class_type="nodelet::Nodelet">
     <description>Nodelet to perform stereo processing on a pair of rectified image streams, producing disparity images</description>
   </class>
 

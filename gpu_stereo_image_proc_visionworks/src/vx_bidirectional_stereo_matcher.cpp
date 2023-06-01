@@ -44,93 +44,55 @@
 
 #include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 
-VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher()
-    : VXStereoMatcherBase() {}
+namespace gpu_stereo_image_proc_visionworks {
 
 VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
     const VXStereoMatcherParams &params)
     : VXStereoMatcherBase(params) {
   vx_status status;
 
-  if (params.downsample > 1) {
-    // left_scaled_ = vxCreateImage( context_,
-    //     params.scaled_image_size().width, params.scaled_image_size().height,
-    //     VX_DF_IMAGE_U8);
-    // VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
+  flipped_left_ =
+      vxCreateImage(context_, left_scaler_->outputSize().width,
+                    left_scaler_->outputSize().height, VX_DF_IMAGE_U8);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_left_));
 
-    // right_scaled_ = vxCreateImage(
-    //     context_,
-    //     params.scaled_image_size().width, params.scaled_image_size().height,
-    //     VX_DF_IMAGE_U8);
-    // VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
+  flipped_right_ =
+      vxCreateImage(context_, right_scaler_->outputSize().width,
+                    right_scaler_->outputSize().height, VX_DF_IMAGE_U8);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_right_));
 
-    // disparity_scaled_ = vxCreateImage(
-    //     context_,
-    //     params.scaled_image_size().width, params.scaled_image_size().height,
-    //     VX_DF_IMAGE_S16);
-    // VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_scaled_));
+  flipped_rl_disparity_ =
+      vxCreateImage(context_, left_scaler_->outputSize().width,
+                    left_scaler_->outputSize().height, VX_DF_IMAGE_S16);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_));
 
-    flipped_left_ =
-        vxCreateImage(context_, params.scaled_image_size().width,
-                      params.scaled_image_size().height, VX_DF_IMAGE_U8);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_left_));
+  vx_node left_flip_node = nvxFlipImageNode(graph_, left_scaled_, flipped_left_,
+                                            NVX_FLIP_HORIZONTAL);
+  VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    flipped_right_ =
-        vxCreateImage(context_, params.scaled_image_size().width,
-                      params.scaled_image_size().height, VX_DF_IMAGE_U8);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_right_));
+  vx_node right_flip_node = nvxFlipImageNode(
+      graph_, right_scaled_, flipped_right_, NVX_FLIP_HORIZONTAL);
+  VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    flipped_rl_disparity_ =
-        vxCreateImage(context_, params.scaled_image_size().width,
-                      params.scaled_image_size().height, VX_DF_IMAGE_S16);
-    VX_CHECK_STATUS(vxGetStatus((vx_reference)flipped_rl_disparity_));
+  vx_node sgm_node = nvxSemiGlobalMatchingNode(
+      graph_, left_scaled_, right_scaled_, disparity_, params.min_disparity,
+      params.max_disparity, params.P1, params.P2, params.sad_win_size,
+      params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
+      params.uniqueness_ratio, params.scanline_mask, params.flags);
+  VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    // vx_node left_scale_node = vxScaleImageNode(
-    //     graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
-    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
+  vx_node rl_sgm_node = nvxSemiGlobalMatchingNode(
+      graph_, flipped_right_, flipped_left_, flipped_rl_disparity_,
+      params.min_disparity, params.max_disparity, params.P1, params.P2,
+      params.sad_win_size, params.ct_win_size, params.hc_win_size, params.clip,
+      params.max_diff, params.uniqueness_ratio, params.scanline_mask,
+      params.flags);
+  VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-    // vx_node right_scale_node = vxScaleImageNode(
-    //     graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
-    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-    vx_node left_flip_node = nvxFlipImageNode(
-        graph_, left_scaled_, flipped_left_, NVX_FLIP_HORIZONTAL);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-    vx_node right_flip_node = nvxFlipImageNode(
-        graph_, right_scaled_, flipped_right_, NVX_FLIP_HORIZONTAL);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-    vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_scaled_, right_scaled_, disparity_, params.min_disparity,
-        params.max_disparity, params.P1, params.P2, params.sad_win_size,
-        params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
-        params.uniqueness_ratio, params.scanline_mask, params.flags);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-    vx_node rl_sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, flipped_right_, flipped_left_, flipped_rl_disparity_,
-        params.min_disparity, params.max_disparity, params.P1, params.P2,
-        params.sad_win_size, params.ct_win_size, params.hc_win_size,
-        params.clip, params.max_diff, params.uniqueness_ratio,
-        params.scanline_mask, params.flags);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
-    // vxReleaseNode(&left_scale_node);
-    // vxReleaseNode(&right_scale_node);
-    vxReleaseNode(&left_flip_node);
-    vxReleaseNode(&right_flip_node);
-    vxReleaseNode(&sgm_node);
-    vxReleaseNode(&rl_sgm_node);
-  } else {
-    vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_image_, right_image_, disparity_, params.min_disparity,
-        params.max_disparity, params.P1, params.P2, params.sad_win_size,
-        params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
-        params.uniqueness_ratio, params.scanline_mask, params.flags);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-    vxReleaseNode(&sgm_node);
-  }
+  vxReleaseNode(&left_flip_node);
+  vxReleaseNode(&right_flip_node);
+  vxReleaseNode(&sgm_node);
+  vxReleaseNode(&rl_sgm_node);
 }
 
 VXBidirectionalStereoMatcher::~VXBidirectionalStereoMatcher() {}
@@ -198,3 +160,5 @@ void VXBidirectionalStereoMatcher::compute(cv::InputArray left,
     map.getMat().copyTo(filter_output_);
   }
 }
+
+}  // namespace gpu_stereo_image_proc_visionworks
