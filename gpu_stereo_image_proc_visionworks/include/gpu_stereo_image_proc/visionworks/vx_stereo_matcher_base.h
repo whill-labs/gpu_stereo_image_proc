@@ -38,10 +38,10 @@
 #include <VX/vxu.h>
 #include <ros/ros.h>
 
-#include <NVX/nvx_opencv_interop.hpp>
 #include <memory>
 #include <opencv2/core.hpp>
 
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
 #include "gpu_stereo_image_proc/visionworks/vx_image_scaler.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_params.h"
 
@@ -58,23 +58,12 @@ class VXStereoMatcherBase {
   const VXStereoMatcherParams &params() const { return params_; }
 
   cv::Mat unfilteredDisparityMat() const {
-    cv::Mat output;
-    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
-                                     VX_MEMORY_TYPE_HOST);
-    return map.getMat();
+    return vxImageToMatWrapper(disparity_);
   }
 
-  cv::Mat scaledLeftRect() const {
-    nvx_cv::VXImageToCVMatMapper map(left_scaled_, 0, NULL, VX_READ_ONLY,
-                                     VX_MEMORY_TYPE_HOST);
-    return map.getMat();
-  }
+  cv::Mat scaledLeftRect() const { return vxImageToMatWrapper(left_scaled_); }
 
-  virtual cv::Mat disparity() const {
-    nvx_cv::VXImageToCVMatMapper map(disparity_, 0, NULL, VX_READ_ONLY,
-                                     VX_MEMORY_TYPE_HOST);
-    return map.getMat();
-  }
+  virtual cv::Mat disparity() const { return vxImageToMatWrapper(disparity_); }
 
  protected:
   vx_context context_;
@@ -84,7 +73,7 @@ class VXStereoMatcherBase {
   vx_image left_image_;
   vx_image right_image_;
 
-  // Scaled images (equal to {left|right}_imag_ if not scaling)
+  // Scaled images (equal to {left|right}_image_ if not scaling)
   vx_image left_scaled_;
   vx_image right_scaled_;
 

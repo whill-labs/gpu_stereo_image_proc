@@ -35,6 +35,14 @@
 
 namespace gpu_stereo_image_proc_visionworks {
 
+VxImageScaler::VxImageScaler(unsigned int downsample_log2)
+    : downsample_log2_(downsample_log2) {}
+
+VxGaussianImageScaler::VxGaussianImageScaler(unsigned int downsample_log2)
+    : VxImageScaler(downsample_log2), images_(downsample_log2) {
+  ;
+}
+
 vx_image VxGaussianImageScaler::addToGraph(vx_context context, vx_graph graph,
                                            vx_image input) {
   // Retrieve size of input image

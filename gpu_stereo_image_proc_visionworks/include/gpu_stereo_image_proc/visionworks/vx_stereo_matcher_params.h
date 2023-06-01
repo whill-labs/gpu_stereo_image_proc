@@ -108,19 +108,20 @@ struct VXStereoMatcherParams {
 
   void dump() const {
     ROS_INFO("===================================");
-    ROS_INFO("image_size  : w %d, h %d", image_size().width,
+    ROS_INFO("original img size : w %d, h %d", image_size().width,
              image_size().height);
-    ROS_INFO("downsample  : %d", downsample());
-    ROS_INFO("Uniqueness  : %d", uniqueness_ratio);
-    ROS_INFO("Max Diff    : %d", max_diff);
-    ROS_INFO("P1/P2       : P1 %d, P2 %d", P1, P2);
-    ROS_INFO("Win Size    : SAD %d, CT %d, HC %d", sad_win_size, ct_win_size,
-             hc_win_size);
-    ROS_INFO("Clip        : %d", clip);
-    ROS_INFO("Min/Max Disp: min %d, max %d", min_disparity, max_disparity);
-    ROS_INFO("ScanType    : %02X", scanline_mask);
-    ROS_INFO("Flags       : %02X", flags);
-    ROS_INFO("Filtering   : %s", disparity_filter_as_string());
+    ROS_INFO("       Downsample : %d", downsample());
+    ROS_INFO("       Uniqueness : %d", uniqueness_ratio);
+    ROS_INFO("         Max Diff : %d", max_diff);
+    ROS_INFO("            P1/P2 : P1 %d, P2 %d", P1, P2);
+    ROS_INFO("         Win Size : SAD %d, CT %d, HC %d", sad_win_size,
+             ct_win_size, hc_win_size);
+    ROS_INFO("             Clip : %d", clip);
+    ROS_INFO("     Min/Max Disp : min %d, max %d", min_disparity,
+             max_disparity);
+    ROS_INFO("   Scan type mask : 0x%02X", scanline_mask);
+    ROS_INFO("            Flags : %02X", flags);
+    ROS_INFO("        Filtering : %s", disparity_filter_as_string());
     ROS_INFO("===================================");
   }
 

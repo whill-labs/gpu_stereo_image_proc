@@ -56,9 +56,7 @@ class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
   cv::Mat confidenceMat() const { return confidence_; }
 
   cv::Mat RLDisparityMat() const {
-    nvx_cv::VXImageToCVMatMapper map(flipped_rl_disparity_, 0, NULL,
-                                     VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
-    return map.getMat();
+    return vxImageToMatWrapper(flipped_rl_disparity_);
   }
 
  private:
@@ -73,7 +71,7 @@ class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
     int lrc_threshold;
   } _wls_params;
 
- protected:
+  // No default constructor
   VXBidirectionalStereoMatcher() = delete;
 
   // This class is non-copyable

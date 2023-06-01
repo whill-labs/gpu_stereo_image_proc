@@ -39,6 +39,7 @@
 #include <ros/ros.h>
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/cuda.hpp>
 
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
 
@@ -65,14 +66,14 @@ class VXStereoMatcher : public VXStereoMatcherBase {
   }
 
  protected:
+  // GpuMat which stores the result **if** filtering is enabled
+  cv::cuda::GpuMat g_filtered_;
+
   VXStereoMatcher() = delete;
 
   // noncopyable
   VXStereoMatcher(const VXStereoMatcher &) = delete;
   VXStereoMatcher &operator=(const VXStereoMatcher &) = delete;
-
-  // GpuMat which stores the result **if** filtering is enabled
-  cv::cuda::GpuMat g_filtered_;
 };
 
 }  // namespace gpu_stereo_image_proc_visionworks
