@@ -1,0 +1,7 @@
+<library path="lib/libvpi_stereo_image_proc">
+
+  <class name="gpu_stereo_image_proc_vpi/vpi_disparity" type="gpu_stereo_image_proc_vpi::VPIDisparityNodelet" base_class_type="nodelet::Nodelet">
+    <description>Nodelet to perform stereo processing on a pair of rectified image streams, producing disparity images</description>
+  </class>
+
+</library>
