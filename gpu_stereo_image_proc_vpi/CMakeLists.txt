@@ -49,7 +49,6 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${vpi_INCLUDE_
 #  Library (and nodelet)
 set(VPI_NODELET_NAME vpi_stereo_image_proc)
 add_library(${VPI_NODELET_NAME}
-             src/vpi_stereo_matcher_base.cpp
              src/vpi_stereo_matcher.cpp
         #     src/VPI_bidirectional_stereo_matcher.cpp
         #     src/VPI_image_scaler.cpp

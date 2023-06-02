@@ -36,17 +36,21 @@
 #include <opencv2/core.hpp>
 // #include <opencv2/core/cuda.hpp>
 
-#include "gpu_stereo_image_proc/vpi/vpi_stereo_matcher_base.h"
+#include <vpi/Image.h>
+#include <vpi/Stream.h>
+#include <vpi/algo/StereoDisparity.h>
+
+#include "gpu_stereo_image_proc/vpi/vpi_stereo_matcher_params.h"
 
 namespace gpu_stereo_image_proc_vpi {
 
-class VPIStereoMatcher : public VPIStereoMatcherBase {
+class VPIStereoMatcher {
  public:
   VPIStereoMatcher(const VPIStereoMatcherParams &params);
 
   virtual ~VPIStereoMatcher();
 
-  void compute(cv::InputArray left, cv::InputArray right) override;
+  virtual void compute(cv::InputArray left, cv::InputArray right);
 
   const VPIStereoMatcherParams &params() const { return params_; }
 
@@ -55,18 +59,6 @@ class VPIStereoMatcher : public VPIStereoMatcherBase {
 
   virtual cv::Mat disparity() const { return disparity_m_; }
   virtual cv::Mat confidence() const { return confidence8_m_; }
-
-  // cv::Mat disparity() const override {
-  //   if (params_.filtering == VPIStereoMatcherParams::Filtering_Bilateral) {
-  //     // I suspect this is inefficient...
-  //     cv::Mat out;
-  //     g_filtered_.download(out);
-  //     return out;
-  //   } else {
-  //     // Call the super
-  //     return VPIStereoMatcherBase::disparity();
-  //   }
-  //}
 
  protected:
   VPIPayload stereo_payload_;
@@ -81,6 +73,7 @@ class VPIStereoMatcher : public VPIStereoMatcherBase {
   VPIImage confidence8_, disparity_;
 
   VPIStereoMatcherParams params_;
+
   VPIStereoMatcher() = delete;
 
   // noncopyable

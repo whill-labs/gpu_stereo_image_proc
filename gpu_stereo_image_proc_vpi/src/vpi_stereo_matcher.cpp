@@ -128,7 +128,7 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
   VPIStereoDisparityEstimatorParams stereo_params;
   stereo_params.windowSize = params_.window_size;
   stereo_params.maxDisparity = 0;  // Inherit from create_params_
-  vpiSubmitStereoDisparityEstimator(stream_, VPI_BACKEND_CUDA, stereo_,
+  vpiSubmitStereoDisparityEstimator(stream_, VPI_BACKEND_CUDA, stereo_payload_,
                                     left_scaled_, right_scaled_, disparity_,
                                     confidence_, &stereo_params);
 

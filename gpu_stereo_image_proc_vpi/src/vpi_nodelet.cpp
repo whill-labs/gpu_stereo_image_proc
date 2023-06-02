@@ -109,7 +109,7 @@ class VPIDisparityNodelet : public nodelet::Nodelet {
   image_geometry::StereoCameraModel model_;
 
   VPIStereoMatcherParams params_;
-  std::shared_ptr<VPIStereoMatcherBase> stereo_matcher_;
+  std::shared_ptr<VPIStereoMatcher> stereo_matcher_;
   bool debug_topics_;
 
   virtual void onInit();
