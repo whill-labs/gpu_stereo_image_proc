@@ -109,7 +109,7 @@ class VXDisparityNodelet : public nodelet::Nodelet {
   image_geometry::StereoCameraModel model_;
 
   VXStereoMatcherParams params_;
-  std::shared_ptr<VXStereoMatcherBase> stereo_matcher_;
+  std::shared_ptr<VXStereoMatcher> stereo_matcher_;
   bool debug_topics_;
 
   unsigned int confidence_threshold_;
