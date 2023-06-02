@@ -53,7 +53,7 @@ add_library(${VX_NODELET_NAME}
             src/vx_bidirectional_stereo_matcher.cpp
             src/vx_image_scaler.cpp
             src/vx_conversions.cpp
-            src/nodelet/vx_disparity.cpp)
+            src/vx_nodelet.cpp)
 target_link_libraries(${VX_NODELET_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}
                                       ${VisionWorks_LIBRARIES}
