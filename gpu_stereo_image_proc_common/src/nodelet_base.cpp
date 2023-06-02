@@ -77,18 +77,6 @@ void DisparityNodeletBase::imageCb(const ImageConstPtr &l_image_msg,
   scaled_model_.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   imageCallback(l_image_msg, l_info_msg, r_image_msg, r_info_msg);
-
-  //   // Create cv::Mat views in the two input buffers
-  //   const cv::Mat_<uint8_t> l_image =
-  //       cv_bridge::toCvShare(l_image_msg,
-  //       sensor_msgs::image_encodings::MONO8)
-  //           ->image;
-  //   const cv::Mat_<uint8_t> r_image =
-  //       cv_bridge::toCvShare(r_image_msg,
-  //       sensor_msgs::image_encodings::MONO8)
-  //           ->image;
-
-  //   params_.set_image_size(cv::Size(l_image.cols, l_image.rows));
 }
 
 }  // namespace gpu_stereo_image_proc
