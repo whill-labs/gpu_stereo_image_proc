@@ -142,6 +142,9 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
 
   vpiStreamSync(stream_);
 
+  vpiImageDestroy(left);
+  vpiImageDestroy(right);
+
   // //  left_image_ = 	nvx_cv::createVXImageFromCVMat(context_, left.getMat());
   // //  right_image_ = 	nvx_cv::createVXImageFromCVMat(context_,
   // //  right.getMat());

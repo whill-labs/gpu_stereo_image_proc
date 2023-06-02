@@ -1,7 +1,5 @@
 /*********************************************************************
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2019, WHILL, Inc.
+ *  Copyright (c) 2023 University of Washington
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +12,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the Willow Garage nor the names of its
+ *   * Neither the name of the University of Washington nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -51,13 +49,6 @@ void loadMonocularNodelets(nodelet::Loader& manager, const std::string& side,
   // std::string image_rect_color_topic = ros::names::resolve(side +
   // "/image_rect_color");
   std::string camera_info_topic = ros::names::resolve(side + "/camera_info");
-
-  // Debayer nodelet: image_raw -> image_mono, image_color
-  // remappings["image_raw"]   = image_raw_topic;
-  // remappings["image_mono"]  = image_mono_topic;
-  // remappings["image_color"] = image_color_topic;
-  // std::string debayer_name  = ros::this_node::getName() + "_debayer_" + side;
-  // manager.load(debayer_name, "image_proc/debayer", remappings, my_argv);
 
   // Rectify nodelet: image_mono -> image_rect
   remappings.clear();
@@ -128,8 +119,8 @@ int main(int argc, char** argv) {
   // disparity nodelet because it is the only one using dynamic_reconfigure so
   // far, and this makes us backwards-compatible with cturtle.
   std::string disparity_name = ros::this_node::getName();
-  manager.load(disparity_name, "gpu_stereo_image_proc/vx_disparity", remappings,
-               my_argv);
+  manager.load(disparity_name, "stereo_image_proc_vpi/vpi_disparity",
+               remappings, my_argv);
 
   // PointCloud2 nodelet
   // Inputs: left/image_rect_color, left/camera_info, right/camera_info,

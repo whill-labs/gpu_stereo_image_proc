@@ -50,13 +50,10 @@ include_directories(${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${vpi_INCLUDE_
 set(VPI_NODELET_NAME vpi_stereo_image_proc)
 add_library(${VPI_NODELET_NAME}
              src/vpi_stereo_matcher.cpp
-        #     src/VPI_bidirectional_stereo_matcher.cpp
-        #     src/VPI_image_scaler.cpp
-        #     src/VPI_conversions.cpp
             src/vpi_nodelet.cpp)
 target_link_libraries(${VPI_NODELET_NAME} ${catkin_LIBRARIES}
                                       ${OpenCV_LIBRARIES}
-                                      ${vpi_LIBRARIES}
+                                      vpi
 )
 add_dependencies(${VPI_NODELET_NAME} ${PROJECT_NAME}_gencfg)
 install(TARGETS ${VPI_NODELET_NAME}

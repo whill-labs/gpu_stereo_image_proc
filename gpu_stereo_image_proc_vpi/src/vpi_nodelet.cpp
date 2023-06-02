@@ -262,24 +262,24 @@ void VPIDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
     update_stereo_matcher();
   }
 
-  // // If you **still** don't have a stereo matcher, give up...
-  // if (!stereo_matcher_) return;
+  // If you **still** don't have a stereo matcher, give up...
+  if (!stereo_matcher_) return;
 
   // // Pull in some parameters as constants
-  // const int min_disparity = stereo_matcher_->params().min_disparity;
-  // const int max_disparity = stereo_matcher_->params().max_disparity;
-  // const int downsample = stereo_matcher_->params().downsample();
-  // const int border = stereo_matcher_->params().sad_win_size / 2;
+  const int min_disparity = 0;
+  const int max_disparity = stereo_matcher_->params().max_disparity;
+  const int downsample = stereo_matcher_->params().downsample();
+  const int border = stereo_matcher_->params().window_size / 2;
 
-  // const auto scaled_camera_info_l(scaleCameraInfo(l_info_msg, downsample));
-  // const auto scaled_camera_info_r(scaleCameraInfo(r_info_msg, downsample));
+  const auto scaled_camera_info_l(scaleCameraInfo(l_info_msg, downsample));
+  const auto scaled_camera_info_r(scaleCameraInfo(r_info_msg, downsample));
 
-  // image_geometry::StereoCameraModel scaled_model;
-  // scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
+  image_geometry::StereoCameraModel scaled_model;
+  scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
-  // // Block matcher produces 16-bit signed (fixed point) disparity image
-  // stereo_matcher_->compute(l_image, r_image);
-  // cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
+  // Block matcher produces 16-bit signed (fixed point) disparity image
+  stereo_matcher_->compute(l_image, r_image);
+  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
 
   // if (debug_topics_) {
   //   DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
@@ -318,14 +318,19 @@ void VPIDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   //   }
   // }
 
-  // DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
-  //                            min_disparity, max_disparity, border);
+  cv::Mat confidence = stereo_matcher_->confidence();
+  cv_bridge::CvImage confidence_bridge(l_image_msg->header, "16SC1",
+                                       confidence);
+  pub_confidence_.publish(confidence_bridge.toImageMsg());
 
-  // pub_disparity_.publish(dg.getDisparity());
-  // pub_depth_.publish(dg.getDepth());
+  DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
+                             min_disparity, max_disparity, border);
 
-  // scaled_left_camera_info_.publish(scaled_camera_info_l);
-  // scaled_right_camera_info_.publish(scaled_camera_info_r);
+  pub_disparity_.publish(dg.getDisparity());
+  pub_depth_.publish(dg.getDepth());
+
+  scaled_left_camera_info_.publish(scaled_camera_info_l);
+  scaled_right_camera_info_.publish(scaled_camera_info_r);
 
   // cv_bridge::CvImage left_rect_msg_bridge(l_image_msg->header, "mono8",
   //                                         stereo_matcher_->scaledLeftRect());
@@ -362,33 +367,15 @@ void VPIDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Settings for the nodelet itself
   // confidence_threshold_ = config.confidence_threshold;
 
-  // // Tweak all settings to be valid
   // config.correlation_window_size |= 0x1;  // must be odd
+  params_.window_size = config.correlation_window_size;
+
   // config.max_disparity = (config.max_disparity / 4) * 4;
+  params_.max_disparity = config.max_disparity;
 
-  // int scanline_mask = 0;
-  // if (config.path_type == VXSGBM_SCANLINE_ALL) {
-  //   scanline_mask = NVX_SCANLINE_ALL;
-  // } else if (config.path_type == VXSGBM_SCANLINE_CROSS) {
-  //   scanline_mask = NVX_SCANLINE_CROSS;
-  // } else {
-  //   if (config.SCANLINE_LEFT_RIGHT) scanline_mask |= NVX_SCANLINE_LEFT_RIGHT;
-  //   if (config.SCANLINE_TOP_LEFT_BOTTOM_RIGHT)
-  //     scanline_mask |= NVX_SCANLINE_TOP_LEFT_BOTTOM_RIGHT;
-  //   if (config.SCANLINE_TOP_BOTTOM) scanline_mask |= NVX_SCANLINE_TOP_BOTTOM;
-  //   if (config.SCANLINE_TOP_RIGHT_BOTTOM_LEFT)
-  //     scanline_mask |= NVX_SCANLINE_TOP_RIGHT_BOTTOM_LEFT;
-  //   if (config.SCANLINE_RIGHT_LEFT) scanline_mask |= NVX_SCANLINE_RIGHT_LEFT;
-  //   if (config.SCANLINE_BOTTOM_RIGHT_TOP_LEFT)
-  //     scanline_mask |= NVX_SCANLINE_BOTTOM_RIGHT_TOP_LEFT;
-  //   if (config.SCANLINE_BOTTOM_TOP) scanline_mask |= NVX_SCANLINE_BOTTOM_TOP;
-  //   if (config.SCANLINE_BOTTOM_LEFT_TOP_RIGHT)
-  //     scanline_mask |= NVX_SCANLINE_BOTTOM_LEFT_TOP_RIGHT;
-  // }
-
-  // int flags = 0;
-  // if (config.FILTER_TOP_AREA) flags |= NVX_SGM_FILTER_TOP_AREA;
-  // if (config.PYRAMIDAL_STEREO) flags |= NVX_SGM_PYRAMIDAL_STEREO;
+  params_.downsample_log2 = config.downsample;
+  params_.quality = config.quality;
+  params_.confidence_threshold = config.confidence_threshold;
 
   // if (config.disparity_filter == VXSGBM_BilateralFilter) {
   //   ROS_INFO("Enabling bilateral filtering");
@@ -403,24 +390,6 @@ void VPIDisparityNodelet::configCb(Config &config, uint32_t level) {
   //   ROS_INFO("Disabling filtering");
   //   params_.filtering = VXStereoMatcherParams::Filtering_None;
   // }
-
-  // // check stereo method
-  // // Note: With single-threaded NodeHandle, configCb and imageCb can't be
-  // called
-  // // concurrently, so this is thread-safe.
-  // params_.sad_win_size = config.correlation_window_size;
-  // params_.min_disparity = config.min_disparity;
-  // params_.max_disparity = config.max_disparity;
-  // params_.uniqueness_ratio = config.uniqueness_ratio;
-  // params_.P1 = config.P1;
-  // params_.P2 = config.P2;
-  // params_.max_diff = config.disp12MaxDiff;
-  // params_.clip = config.bt_clip_value;
-  // params_.ct_win_size = config.ct_win_size;
-  // params_.hc_win_size = config.hc_win_size;
-  // params_.flags = flags;
-  // params_.scanline_mask = scanline_mask;
-  // params_.downsample_log2 = config.downsample;
 
   update_stereo_matcher();
 }
@@ -445,22 +414,22 @@ void VPIDisparityNodelet::wlsConfigCb(WLSFilterConfig &config, uint32_t level) {
 }
 
 bool VPIDisparityNodelet::update_stereo_matcher() {
-  // // \todo For safety, should mutex this and imageCb
-  // ROS_WARN("Updating stereo_matcher");
+  // \todo For safety, should mutex this and imageCb
+  ROS_WARN("Updating stereo_matcher");
 
-  // if (!params_.valid()) {
-  //   ROS_WARN("Stereo matcher params are not valid...");
-  //   return false;
-  // }
+  if (!params_.valid()) {
+    ROS_WARN("Stereo matcher params are not valid...");
+    return false;
+  }
 
-  // params_.dump();
-  // ROS_WARN("Creating new stereo_matcher");
+  params_.dump();
+  ROS_WARN("Creating new stereo_matcher");
   // if (params_.filtering == VXStereoMatcherParams::Filtering_WLS_LeftRight) {
   //   ROS_INFO("Creating VXBidirectionalStereoMatcher");
   //   stereo_matcher_.reset(new VXBidirectionalStereoMatcher(params_));
   // } else {
-  //   stereo_matcher_.reset(new VXStereoMatcher(params_));
-  // }
+  stereo_matcher_.reset(new VPIStereoMatcher(params_));
+  //}
   return true;
 }
 
