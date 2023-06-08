@@ -41,31 +41,61 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/cuda.hpp>
 
-#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_base.h"
+// #include <memory>
+// #include <opencv2/core.hpp>
+
+#include "gpu_stereo_image_proc/visionworks/vx_conversions.h"
+#include "gpu_stereo_image_proc/visionworks/vx_image_scaler.h"
+#include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher_params.h"
 
 namespace gpu_stereo_image_proc_visionworks {
 
-class VXStereoMatcher : public VXStereoMatcherBase {
+class VXStereoMatcher {
  public:
   VXStereoMatcher(const VXStereoMatcherParams &params);
 
   virtual ~VXStereoMatcher();
 
-  void compute(cv::InputArray left, cv::InputArray right) override;
+  virtual void compute(cv::InputArray left, cv::InputArray right);
 
-  cv::Mat disparity() const override {
+  const VXStereoMatcherParams &params() const { return params_; }
+
+  cv::Mat unfilteredDisparityMat() const {
+    return vxImageToMatWrapper(disparity_);
+  }
+
+  cv::Mat scaledLeftRect() const { return vxImageToMatWrapper(left_scaled_); }
+
+  virtual cv::Mat disparity() const {
     if (params_.filtering == VXStereoMatcherParams::Filtering_Bilateral) {
       // I suspect this is inefficient...
       cv::Mat out;
       g_filtered_.download(out);
       return out;
     } else {
-      // Call the super
-      return VXStereoMatcherBase::disparity();
+      return vxImageToMatWrapper(disparity_);
     }
   }
 
  protected:
+  vx_context context_;
+  vx_graph graph_;
+
+  // Input images
+  vx_image left_image_;
+  vx_image right_image_;
+
+  // Scaled images (equal to {left|right}_image_ if not scaling)
+  vx_image left_scaled_;
+  vx_image right_scaled_;
+
+  // Output images
+  vx_image disparity_;
+
+  VXStereoMatcherParams params_;
+
+  std::unique_ptr<VxImageScaler> left_scaler_, right_scaler_;
+
   // GpuMat which stores the result **if** filtering is enabled
   cv::cuda::GpuMat g_filtered_;
 
