@@ -47,47 +47,61 @@
 namespace gpu_stereo_image_proc_visionworks {
 
 VXStereoMatcher::VXStereoMatcher(const VXStereoMatcherParams &params)
-    : VXStereoMatcherBase(params) {
+    : context_(nullptr),
+      graph_(nullptr),
+      left_image_(nullptr),
+      right_image_(nullptr),
+      left_scaled_(nullptr),
+      right_scaled_(nullptr),
+      disparity_(nullptr),
+      left_scaler_(new VxGaussianImageScaler(params.downsample_log2)),
+      right_scaler_(new VxGaussianImageScaler(params.downsample_log2)),
+      params_(params) {
   vx_status status;
 
-  if (params.downsample_log2 > 0) {
-    // left_scaled_ = vxCreateImage( context_,
-    //     params.scaled_image_size().width, params.scaled_image_size().height,
-    //     VX_DF_IMAGE_U8);
-    // VX_CHECK_STATUS(vxGetStatus((vx_reference)left_scaled_));
+  context_ = vxCreateContext();
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)context_));
 
-    // right_scaled_ = vxCreateImage(context_,
-    //     params.scaled_image_size().width, params.scaled_image_size().height,
-    //     VX_DF_IMAGE_U8);
-    // VX_CHECK_STATUS(vxGetStatus((vx_reference)right_scaled_));
+  graph_ = vxCreateGraph(context_);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)graph_));
 
-    // vx_node left_scale_node = vxScaleImageNode(
-    //     graph_, left_image_, left_scaled_, VX_INTERPOLATION_BILINEAR);
-    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
-    // vx_node right_scale_node = vxScaleImageNode(
-    //     graph_, right_image_, right_scaled_, VX_INTERPOLATION_BILINEAR);
-    // VX_CHECK_STATUS(vxVerifyGraph(graph_));
+  left_image_ = vxCreateImage(context_, params.image_size().width,
+                              params.image_size().height, VX_DF_IMAGE_U8);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)left_image_));
 
-    vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_scaled_, right_scaled_, disparity_, params.min_disparity,
-        params.max_disparity, params.P1, params.P2, params.sad_win_size,
-        params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
-        params.uniqueness_ratio, params.scanline_mask, params.flags);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
+  right_image_ = vxCreateImage(context_, params.image_size().width,
+                               params.image_size().height, VX_DF_IMAGE_U8);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)right_image_));
 
-    vxReleaseNode(&sgm_node);
-  } else {
-    vx_node sgm_node = nvxSemiGlobalMatchingNode(
-        graph_, left_image_, right_image_, disparity_, params.min_disparity,
-        params.max_disparity, params.P1, params.P2, params.sad_win_size,
-        params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
-        params.uniqueness_ratio, params.scanline_mask, params.flags);
-    VX_CHECK_STATUS(vxVerifyGraph(graph_));
-    vxReleaseNode(&sgm_node);
-  }
+  disparity_ =
+      vxCreateImage(context_, params.scaled_image_size().width,
+                    params.scaled_image_size().height, VX_DF_IMAGE_S16);
+  VX_CHECK_STATUS(vxGetStatus((vx_reference)disparity_));
+
+  left_scaled_ = left_scaler_->addToGraph(context_, graph_, left_image_);
+  right_scaled_ = right_scaler_->addToGraph(context_, graph_, right_image_);
+
+  vx_node sgm_node = nvxSemiGlobalMatchingNode(
+      graph_, left_scaled_, right_scaled_, disparity_, params.min_disparity,
+      params.max_disparity, params.P1, params.P2, params.sad_win_size,
+      params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
+      params.uniqueness_ratio, params.scanline_mask, params.flags);
+  VX_CHECK_STATUS(vxVerifyGraph(graph_));
+  vxReleaseNode(&sgm_node);
 }
 
-VXStereoMatcher::~VXStereoMatcher() {}
+VXStereoMatcher::~VXStereoMatcher() {
+  vxReleaseImage(&left_image_);
+  vxReleaseImage(&right_image_);
+  vxReleaseImage(&disparity_);
+
+  // Explicitly delete scalers before the graph is deleted
+  left_scaler_.reset(nullptr);
+  right_scaler_.reset(nullptr);
+
+  vxReleaseGraph(&graph_);
+  vxReleaseContext(&context_);
+}
 
 void VXStereoMatcher::compute(cv::InputArray left, cv::InputArray right) {
   //  left_image_ = 	nvx_cv::createVXImageFromCVMat(context_, left.getMat());

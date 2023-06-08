@@ -47,6 +47,7 @@ add_definitions(-DOPENCV_TRAITS_ENABLE_DEPRECATED)
 
 add_library(${PROJECT_NAME}
             src/sgbm_processor.cpp
+            src/nodelet_base.cpp
             src/msg_conversions.cpp
             src/camera_info_conversions.cpp )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES}

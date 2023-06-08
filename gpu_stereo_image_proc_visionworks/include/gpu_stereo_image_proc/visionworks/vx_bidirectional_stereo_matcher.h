@@ -43,7 +43,7 @@
 
 namespace gpu_stereo_image_proc_visionworks {
 
-class VXBidirectionalStereoMatcher : public VXStereoMatcherBase {
+class VXBidirectionalStereoMatcher : public VXStereoMatcher {
  public:
   VXBidirectionalStereoMatcher(const VXStereoMatcherParams &params);
 

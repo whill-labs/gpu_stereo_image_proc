@@ -48,8 +48,11 @@ namespace gpu_stereo_image_proc_visionworks {
 
 VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
     const VXStereoMatcherParams &params)
-    : VXStereoMatcherBase(params) {
+    : VXStereoMatcher(params) {
   vx_status status;
+
+  // The standard left/right -> disparity_ computation is added to
+  // the graph in VXStereoMatcher's constructor
 
   flipped_left_ =
       vxCreateImage(context_, left_scaler_->outputSize().width,
@@ -74,13 +77,6 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
       graph_, right_scaled_, flipped_right_, NVX_FLIP_HORIZONTAL);
   VX_CHECK_STATUS(vxVerifyGraph(graph_));
 
-  vx_node sgm_node = nvxSemiGlobalMatchingNode(
-      graph_, left_scaled_, right_scaled_, disparity_, params.min_disparity,
-      params.max_disparity, params.P1, params.P2, params.sad_win_size,
-      params.ct_win_size, params.hc_win_size, params.clip, params.max_diff,
-      params.uniqueness_ratio, params.scanline_mask, params.flags);
-  VX_CHECK_STATUS(vxVerifyGraph(graph_));
-
   vx_node rl_sgm_node = nvxSemiGlobalMatchingNode(
       graph_, flipped_right_, flipped_left_, flipped_rl_disparity_,
       params.min_disparity, params.max_disparity, params.P1, params.P2,
@@ -91,7 +87,6 @@ VXBidirectionalStereoMatcher::VXBidirectionalStereoMatcher(
 
   vxReleaseNode(&left_flip_node);
   vxReleaseNode(&right_flip_node);
-  vxReleaseNode(&sgm_node);
   vxReleaseNode(&rl_sgm_node);
 }
 
