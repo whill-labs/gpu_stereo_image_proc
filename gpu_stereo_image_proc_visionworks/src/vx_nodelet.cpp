@@ -187,6 +187,10 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
       cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)
           ->image;
 
+  if ((l_image.size() != r_image.size()) || (l_image.rows == 0) ||
+      (l_image.rows == 0) || (r_image.cols == 0) || (r_image.cols == 0))
+    return;
+
   params_.set_image_size(cv::Size(l_image.cols, l_image.rows));
   if (stereo_matcher_) {
     const cv::Size image_size = stereo_matcher_->params().image_size();
