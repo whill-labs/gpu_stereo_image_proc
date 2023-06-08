@@ -180,6 +180,11 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
                                        const ImageConstPtr &r_image_msg,
                                        const CameraInfoConstPtr &r_info_msg) {
   // Create cv::Mat views in the two input buffers
+  //  const cv::Mat l_image(cv_bridge::toCvShare(l_image_msg,
+  //  l_image_msg->encoding)->image); const cv::Mat
+  //  r_image(cv_bridge::toCvShare(r_image_msg, l_image_msg->encoding)->image);
+
+  // Cast images to MONO8, Visionworks' SGM can only handle 8-bit
   const cv::Mat_<uint8_t> l_image =
       cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::MONO8)
           ->image;
@@ -191,10 +196,10 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
       (l_image.rows == 0) || (r_image.cols == 0) || (r_image.cols == 0))
     return;
 
-  params_.set_image_size(cv::Size(l_image.cols, l_image.rows));
+  params_.set_image_size(cv::Size(l_image.cols, l_image.rows), l_image.type());
   if (stereo_matcher_) {
-    const cv::Size image_size = stereo_matcher_->params().image_size();
-    if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
+    if ((stereo_matcher_->params().image_size() != params_.image_size()) ||
+        (stereo_matcher_->params().image_type() != params_.image_type())) {
       update_stereo_matcher();
     }
   } else {
@@ -256,7 +261,8 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   scaled_left_camera_info_.publish(scaled_model_.left().cameraInfo());
   scaled_right_camera_info_.publish(scaled_model_.right().cameraInfo());
 
-  cv_bridge::CvImage left_rect_msg_bridge(l_image_msg->header, "mono8",
+  cv_bridge::CvImage left_rect_msg_bridge(l_image_msg->header,
+                                          l_image_msg->encoding,
                                           stereo_matcher_->scaledLeftRect());
   scaled_left_rect_.publish(left_rect_msg_bridge.toImageMsg());
 
