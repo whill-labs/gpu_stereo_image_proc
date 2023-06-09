@@ -56,6 +56,8 @@
 #include "gpu_stereo_image_proc/msg_conversions.h"
 // #include
 // "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
+
+#include "gpu_stereo_image_proc/nodelet_base.h"
 #include "gpu_stereo_image_proc/vpi/vpi_stereo_matcher.h"
 #include "gpu_stereo_image_proc_common/DisparityBilateralFilterConfig.h"
 #include "gpu_stereo_image_proc_common/DisparityWLSFilterConfig.h"
@@ -67,22 +69,10 @@ using namespace sensor_msgs;
 using namespace stereo_msgs;
 using namespace message_filters::sync_policies;
 
-class VPIDisparityNodelet : public nodelet::Nodelet {
+class VPIDisparityNodelet : public gpu_stereo_image_proc::DisparityNodeletBase {
   boost::shared_ptr<image_transport::ImageTransport> it_;
 
-  // Subscriptions
-  image_transport::SubscriberFilter sub_l_image_, sub_r_image_;
-  message_filters::Subscriber<CameraInfo> sub_l_info_, sub_r_info_;
-  typedef ExactTime<Image, CameraInfo, Image, CameraInfo> ExactPolicy;
-  typedef ApproximateTime<Image, CameraInfo, Image, CameraInfo>
-      ApproximatePolicy;
-  typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
-  typedef message_filters::Synchronizer<ApproximatePolicy> ApproximateSync;
-  boost::shared_ptr<ExactSync> exact_sync_;
-  boost::shared_ptr<ApproximateSync> approximate_sync_;
-
   // Publications
-  boost::mutex connect_mutex_;
   ros::Publisher pub_disparity_, debug_lr_disparity_, debug_rl_disparity_;
   ros::Publisher debug_raw_disparity_, debug_disparity_mask_, pub_confidence_;
   ros::Publisher pub_depth_;
@@ -96,14 +86,14 @@ class VPIDisparityNodelet : public nodelet::Nodelet {
   typedef dynamic_reconfigure::Server<Config> ReconfigureServer;
   boost::shared_ptr<ReconfigureServer> reconfigure_server_;
 
-  typedef gpu_stereo_image_proc::DisparityBilateralFilterConfig
-      BilateralFilterConfig;
-  boost::shared_ptr<dynamic_reconfigure::Server<BilateralFilterConfig>>
-      dyncfg_bilateral_filter_;
+  // typedef gpu_stereo_image_proc::DisparityBilateralFilterConfig
+  //     BilateralFilterConfig;
+  // boost::shared_ptr<dynamic_reconfigure::Server<BilateralFilterConfig>>
+  //     dyncfg_bilateral_filter_;
 
-  typedef gpu_stereo_image_proc::DisparityWLSFilterConfig WLSFilterConfig;
-  boost::shared_ptr<dynamic_reconfigure::Server<WLSFilterConfig>>
-      dyncfg_wls_filter_;
+  // typedef gpu_stereo_image_proc::DisparityWLSFilterConfig WLSFilterConfig;
+  // boost::shared_ptr<dynamic_reconfigure::Server<WLSFilterConfig>>
+  //     dyncfg_wls_filter_;
 
   // Processing state (note: only safe because we're single-threaded!)
   image_geometry::StereoCameraModel model_;
@@ -114,17 +104,23 @@ class VPIDisparityNodelet : public nodelet::Nodelet {
 
   virtual void onInit();
 
-  void connectCb();
+  bool hasSubscribers() const override {
+    return (pub_disparity_.getNumSubscribers() > 0) ||
+           (pub_confidence_.getNumSubscribers() > 0) ||
+           (pub_depth_.getNumSubscribers() > 0);
+  }
 
-  void imageCb(const ImageConstPtr &l_image_msg,
-               const CameraInfoConstPtr &l_info_msg,
-               const ImageConstPtr &r_image_msg,
-               const CameraInfoConstPtr &r_info_msg);
+  int downsample() const override { return params_.downsample(); }
+
+  void imageCallback(const ImageConstPtr &l_image_msg,
+                     const CameraInfoConstPtr &l_info_msg,
+                     const ImageConstPtr &r_image_msg,
+                     const CameraInfoConstPtr &r_info_msg) override;
 
   void configCb(Config &config, uint32_t level);
 
-  void bilateralConfigCb(BilateralFilterConfig &config, uint32_t level);
-  void wlsConfigCb(WLSFilterConfig &config, uint32_t level);
+  // void bilateralConfigCb(BilateralFilterConfig &config, uint32_t level);
+  // void wlsConfigCb(WLSFilterConfig &config, uint32_t level);
 
   bool update_stereo_matcher();
 
@@ -135,31 +131,12 @@ class VPIDisparityNodelet : public nodelet::Nodelet {
 VPIDisparityNodelet::VPIDisparityNodelet() {}
 
 void VPIDisparityNodelet::onInit() {
+  DisparityNodeletBase::onInit();
+
   // Use the single-threaded model.   There are really only two callbacks:
   // config and new images.  Don't want to have to deconflict those
   ros::NodeHandle &nh = getNodeHandle();
   ros::NodeHandle &private_nh = getPrivateNodeHandle();
-
-  it_.reset(new image_transport::ImageTransport(nh));
-
-  // Synchronize inputs. Topic subscriptions happen on demand in the connection
-  // callback. Optionally do approximate synchronization.
-  int queue_size;
-  private_nh.param("queue_size", queue_size, 5);
-  bool approx;
-  private_nh.param("approximate_sync", approx, false);
-  if (approx) {
-    approximate_sync_.reset(new ApproximateSync(ApproximatePolicy(queue_size),
-                                                sub_l_image_, sub_l_info_,
-                                                sub_r_image_, sub_r_info_));
-    approximate_sync_->registerCallback(
-        boost::bind(&VPIDisparityNodelet::imageCb, this, _1, _2, _3, _4));
-  } else {
-    exact_sync_.reset(new ExactSync(ExactPolicy(queue_size), sub_l_image_,
-                                    sub_l_info_, sub_r_image_, sub_r_info_));
-    exact_sync_->registerCallback(
-        boost::bind(&VPIDisparityNodelet::imageCb, this, _1, _2, _3, _4));
-  }
 
   // Set up dynamic reconfiguration
   ReconfigureServer::CallbackType f =
@@ -169,7 +146,7 @@ void VPIDisparityNodelet::onInit() {
 
   // Monitor whether anyone is subscribed to the output
   ros::SubscriberStatusCallback connect_cb =
-      boost::bind(&VPIDisparityNodelet::connectCb, this);
+      boost::bind(&DisparityNodeletBase::connectCb, this);
 
   // Make sure we don't enter connectCb() between advertising and assigning to
   // pub_disparity_
@@ -207,55 +184,25 @@ void VPIDisparityNodelet::onInit() {
   }
 }
 
-// Handles (un)subscribing when clients (un)subscribe
-void VPIDisparityNodelet::connectCb() {
-  boost::lock_guard<boost::mutex> lock(connect_mutex_);
-
-  // If none of the relevant topics have subsubscribers, then we
-  // can relax...
-  if ((pub_disparity_.getNumSubscribers() == 0) &&
-      (pub_confidence_.getNumSubscribers() == 0) &&
-      (pub_depth_.getNumSubscribers() == 0)) {
-    sub_l_image_.unsubscribe();
-    sub_l_info_.unsubscribe();
-    sub_r_image_.unsubscribe();
-    sub_r_info_.unsubscribe();
-  } else if (!sub_l_image_.getSubscriber()) {
-    ros::NodeHandle &nh = getNodeHandle();
-    ROS_DEBUG("Client connecting, subscribing to images...");
-
-    // Queue size 1 should be OK; the one that matters is the synchronizer queue
-    // size.
-    /// @todo Allow remapping left, right?
-    image_transport::TransportHints hints("raw", ros::TransportHints(),
-                                          getPrivateNodeHandle());
-    sub_l_image_.subscribe(*it_, "left/image_rect", 1, hints);
-    sub_l_info_.subscribe(nh, "left/camera_info", 1);
-    sub_r_image_.subscribe(*it_, "right/image_rect", 1, hints);
-    sub_r_info_.subscribe(nh, "right/camera_info", 1);
-  }
-}
-
-void VPIDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
-                                  const CameraInfoConstPtr &l_info_msg,
-                                  const ImageConstPtr &r_image_msg,
-                                  const CameraInfoConstPtr &r_info_msg) {
+void VPIDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
+                                        const CameraInfoConstPtr &l_info_msg,
+                                        const ImageConstPtr &r_image_msg,
+                                        const CameraInfoConstPtr &r_info_msg) {
   // Update the camera model
   model_.fromCameraInfo(l_info_msg, r_info_msg);
 
   // Create cv::Mat views in the two input buffers
-  const cv::Mat_<uint8_t> l_image =
-      cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::MONO8)
-          ->image;
-  const cv::Mat_<uint8_t> r_image =
-      cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8)
-          ->image;
+  const cv::Mat l_image = cv_bridge::toCvShare(l_image_msg)->image;
+  const cv::Mat r_image = cv_bridge::toCvShare(r_image_msg)->image;
 
-  params_.set_image_size(cv::Size(l_image.cols, l_image.rows));
+  if ((l_image.size() != r_image.size()) || (l_image.rows == 0) ||
+      (l_image.rows == 0) || (r_image.cols == 0) || (r_image.cols == 0))
+    return;
 
+  params_.set_image_size(cv::Size(l_image.cols, l_image.rows), l_image.type());
   if (stereo_matcher_) {
-    const cv::Size image_size = stereo_matcher_->params().image_size();
-    if (image_size.width != l_image.cols || image_size.height != l_image.rows) {
+    if ((stereo_matcher_->params().image_size() != params_.image_size()) ||
+        (stereo_matcher_->params().image_type() != params_.image_type())) {
       update_stereo_matcher();
     }
   } else {
@@ -279,7 +226,12 @@ void VPIDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
   stereo_matcher_->compute(l_image, r_image);
-  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
+
+  //  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
+
+  // double mmin, mmax;
+  // cv::minMaxLoc(disparityS16, &mmin, &mmax);
+  // NODELET_INFO_STREAM("Disparity min " << mmin << "; " << mmax);
 
   // if (debug_topics_) {
   //   DisparityImageGenerator raw_dg(l_image_msg, disparityS16, scaled_model,
@@ -318,16 +270,18 @@ void VPIDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   //   }
   // }
 
-  cv::Mat confidence = stereo_matcher_->confidence();
-  cv_bridge::CvImage confidence_bridge(l_image_msg->header, "16SC1",
-                                       confidence);
-  pub_confidence_.publish(confidence_bridge.toImageMsg());
+  // cv::Mat confidence = stereo_matcher_->confidence();
+  // cv_bridge::CvImage confidence_bridge(l_image_msg->header, "8UC1",
+  //                                      confidence);
+  // pub_confidence_.publish(confidence_bridge.toImageMsg());
 
-  DisparityImageGenerator dg(l_image_msg, disparityS16, scaled_model,
-                             min_disparity, max_disparity, border);
+  // DisparityImageGenerator dg(scaled_model,
+  //                            min_disparity, max_disparity, border);
 
-  pub_disparity_.publish(dg.getDisparity());
-  pub_depth_.publish(dg.getDepth());
+  // auto dgr(dg.generate(l_image_msg, disparityS16));
+
+  // pub_disparity_.publish(dgr.getDisparity());
+  // pub_depth_.publish(dgr.getDepth());
 
   scaled_left_camera_info_.publish(scaled_camera_info_l);
   scaled_right_camera_info_.publish(scaled_camera_info_r);
@@ -347,19 +301,6 @@ void VPIDisparityNodelet::imageCb(const ImageConstPtr &l_image_msg,
   //     debug_lr_disparity_.publish(lr_disp_msg);
   //   }
 
-  //   if (std::shared_ptr<VXBidirectionalStereoMatcher> bm =
-  //           std::dynamic_pointer_cast<VXBidirectionalStereoMatcher>(
-  //               stereo_matcher_)) {
-  //     // This results in an copy of the mat, so only do it if necessary..
-  //     cv::Mat rlScaledDisparity = bm->RLDisparityMat();
-  //     if (!rlScaledDisparity.empty()) {
-  //       DisparityImageGenerator rl_disp_dg(l_image_msg, rlScaledDisparity,
-  //                                          scaled_model, min_disparity,
-  //                                          max_disparity, border);
-  //       DisparityImagePtr rl_disp_msg = rl_disp_dg.getDisparity();
-  //       debug_rl_disparity_.publish(rl_disp_msg);
-  //     }
-  //   }
   // }
 }
 
@@ -367,48 +308,12 @@ void VPIDisparityNodelet::configCb(Config &config, uint32_t level) {
   // Settings for the nodelet itself
   // confidence_threshold_ = config.confidence_threshold;
 
-  // config.correlation_window_size |= 0x1;  // must be odd
   params_.window_size = config.correlation_window_size;
-
-  // config.max_disparity = (config.max_disparity / 4) * 4;
   params_.max_disparity = config.max_disparity;
 
   params_.downsample_log2 = config.downsample;
   params_.quality = config.quality;
   params_.confidence_threshold = config.confidence_threshold;
-
-  // if (config.disparity_filter == VXSGBM_BilateralFilter) {
-  //   ROS_INFO("Enabling bilateral filtering");
-  //   params_.filtering = VXStereoMatcherParams::Filtering_Bilateral;
-  //   // } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftOnly) {
-  //   //   ROS_INFO("Enabling Left-only WLS filtering");
-  //   //   params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftOnly;
-  // } else if (config.disparity_filter == VXSGBM_WLSFilter_LeftRight) {
-  //   ROS_INFO("Enabling Left-Right WLS filtering");
-  //   params_.filtering = VXStereoMatcherParams::Filtering_WLS_LeftRight;
-  // } else {
-  //   ROS_INFO("Disabling filtering");
-  //   params_.filtering = VXStereoMatcherParams::Filtering_None;
-  // }
-
-  update_stereo_matcher();
-}
-
-void VPIDisparityNodelet::bilateralConfigCb(BilateralFilterConfig &config,
-                                            uint32_t level) {
-  params_.bilateral_filter_params.sigma_range = config.sigma_range;
-  params_.bilateral_filter_params.radius = config.radius;
-  params_.bilateral_filter_params.num_iters = config.num_iters;
-  params_.bilateral_filter_params.max_disc_threshold =
-      config.max_disc_threshold;
-  params_.bilateral_filter_params.edge_threshold = config.edge_threshold;
-
-  update_stereo_matcher();
-}
-
-void VPIDisparityNodelet::wlsConfigCb(WLSFilterConfig &config, uint32_t level) {
-  params_.wls_filter_params.lambda = config.lambda;
-  params_.wls_filter_params.lrc_threshold = config.lrc_threshold;
 
   update_stereo_matcher();
 }
