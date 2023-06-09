@@ -80,7 +80,6 @@ VPIStereoMatcher::VPIStereoMatcher(const VPIStereoMatcherParams &params)
                                   input_format, 0, &right_scaled_));
 
   confidence8_m_ = cv::Mat(scaled_sz, CV_8UC1);
-  // disparity_m_ = cv::Mat(scaled_sz, CV_16UC1);
 
   VPI_CHECK_STATUS(vpiImageCreateOpenCVMatWrapper(
       confidence8_m_, VPI_IMAGE_FORMAT_U8, 0, &confidence8_));
@@ -91,8 +90,6 @@ VPIStereoMatcher::VPIStereoMatcher(const VPIStereoMatcherParams &params)
   VPI_CHECK_STATUS(vpiImageCreate(scaled_sz.width, scaled_sz.height,
                                   VPI_IMAGE_FORMAT_S16, 0, &disparity_));
 
-  //  vpiImageCreate(scaled_sz.width, scaled_sz.height,
-  //  VPI_IMAGE_FORMAT_S16, 0, &disparity);
   VPI_CHECK_STATUS(vpiImageCreate(scaled_sz.width, scaled_sz.height,
                                   VPI_IMAGE_FORMAT_U16, 0, &confidence_));
 
@@ -123,43 +120,47 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
                                cv::InputArray right_input) {
   VPIImage left, right;
 
-  vpiImageCreateOpenCVMatWrapper(left_input.getMat(), 0, &left);
-  vpiImageCreateOpenCVMatWrapper(right_input.getMat(), 0, &right);
+  VPI_CHECK_STATUS(
+      vpiImageCreateOpenCVMatWrapper(left_input.getMat(), 0, &left));
+  VPI_CHECK_STATUS(
+      vpiImageCreateOpenCVMatWrapper(right_input.getMat(), 0, &right));
 
   const int gaussian_filter_size = 5;
   const float gaussian_filter_sigma = 1.7;
 
-  vpiSubmitGaussianFilter(stream_, VPI_BACKEND_CUDA, left, left_blurred_,
-                          gaussian_filter_size, gaussian_filter_size,
-                          gaussian_filter_sigma, gaussian_filter_sigma,
-                          VPI_BORDER_ZERO);
-  vpiSubmitGaussianFilter(stream_, VPI_BACKEND_CUDA, right, right_blurred_,
-                          gaussian_filter_size, gaussian_filter_size,
-                          gaussian_filter_sigma, gaussian_filter_sigma,
-                          VPI_BORDER_ZERO);
+  VPI_CHECK_STATUS(vpiSubmitGaussianFilter(
+      stream_, VPI_BACKEND_CUDA, left, left_blurred_, gaussian_filter_size,
+      gaussian_filter_size, gaussian_filter_sigma, gaussian_filter_sigma,
+      VPI_BORDER_ZERO));
+  VPI_CHECK_STATUS(vpiSubmitGaussianFilter(
+      stream_, VPI_BACKEND_CUDA, right, right_blurred_, gaussian_filter_size,
+      gaussian_filter_size, gaussian_filter_sigma, gaussian_filter_sigma,
+      VPI_BORDER_ZERO));
 
-  vpiSubmitRescale(stream_, VPI_BACKEND_CUDA, left_blurred_, left_scaled_,
-                   VPI_INTERP_CATMULL_ROM, VPI_BORDER_ZERO, 0);
-  vpiSubmitRescale(stream_, VPI_BACKEND_CUDA, right_blurred_, right_scaled_,
-                   VPI_INTERP_CATMULL_ROM, VPI_BORDER_ZERO, 0);
+  VPI_CHECK_STATUS(vpiSubmitRescale(stream_, VPI_BACKEND_CUDA, left_blurred_,
+                                    left_scaled_, VPI_INTERP_CATMULL_ROM,
+                                    VPI_BORDER_ZERO, 0));
+  VPI_CHECK_STATUS(vpiSubmitRescale(stream_, VPI_BACKEND_CUDA, right_blurred_,
+                                    right_scaled_, VPI_INTERP_CATMULL_ROM,
+                                    VPI_BORDER_ZERO, 0));
 
   VPIStereoDisparityEstimatorParams stereo_params;
   stereo_params.windowSize = params_.window_size;
   stereo_params.maxDisparity = params_.max_disparity;
 
-  vpiSubmitStereoDisparityEstimator(stream_, VPI_BACKEND_CUDA, stereo_payload_,
-                                    left_scaled_, right_scaled_, disparity_,
-                                    confidence_, &stereo_params);
+  VPI_CHECK_STATUS(vpiSubmitStereoDisparityEstimator(
+      stream_, VPI_BACKEND_CUDA, stereo_payload_, left_scaled_, right_scaled_,
+      disparity_, confidence_, &stereo_params));
 
   // Scale the confidence to 0-255
   VPIConvertImageFormatParams cvtParams;
   vpiInitConvertImageFormatParams(&cvtParams);
   cvtParams.scale = 1.0f / 256;
 
-  vpiSubmitConvertImageFormat(stream_, VPI_BACKEND_CUDA, confidence_,
-                              confidence8_, &cvtParams);
+  VPI_CHECK_STATUS(vpiSubmitConvertImageFormat(
+      stream_, VPI_BACKEND_CUDA, confidence_, confidence8_, &cvtParams));
 
-  vpiStreamSync(stream_);
+  VPI_CHECK_STATUS(vpiStreamSync(stream_));
 
   cv::Mat dispMat;
   VPIImageData disparityData;
