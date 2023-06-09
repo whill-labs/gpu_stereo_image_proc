@@ -226,8 +226,7 @@ void VPIDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
 
   // Block matcher produces 16-bit signed (fixed point) disparity image
   stereo_matcher_->compute(l_image, r_image);
-
-  //  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
+  cv::Mat disparityS16 = stereo_matcher_->disparity();
 
   // double mmin, mmax;
   // cv::minMaxLoc(disparityS16, &mmin, &mmax);
@@ -275,13 +274,13 @@ void VPIDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   //                                      confidence);
   // pub_confidence_.publish(confidence_bridge.toImageMsg());
 
-  // DisparityImageGenerator dg(scaled_model,
-  //                            min_disparity, max_disparity, border);
+  DisparityImageGenerator dg(scaled_model, min_disparity, max_disparity,
+                             border);
 
-  // auto dgr(dg.generate(l_image_msg, disparityS16));
+  auto dgr(dg.generate(l_image_msg, disparityS16));
 
-  // pub_disparity_.publish(dgr.getDisparity());
-  // pub_depth_.publish(dgr.getDepth());
+  pub_disparity_.publish(dgr.getDisparity());
+  pub_depth_.publish(dgr.getDepth());
 
   scaled_left_camera_info_.publish(scaled_camera_info_l);
   scaled_right_camera_info_.publish(scaled_camera_info_r);
