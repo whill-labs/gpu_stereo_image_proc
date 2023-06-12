@@ -34,6 +34,9 @@
 #include <boost/thread/lock_guard.hpp>
 #endif
 
+#include <chrono>
+using namespace std::chrono;
+
 #include <cv_bridge/cv_bridge.h>
 #include <dynamic_reconfigure/server.h>
 #include <image_geometry/stereo_camera_model.h>
@@ -57,6 +60,7 @@
 // #include
 // "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 
+#include "code_timing/code_timing.h"
 #include "gpu_stereo_image_proc/nodelet_base.h"
 #include "gpu_stereo_image_proc/vpi/vpi_stereo_matcher.h"
 #include "gpu_stereo_image_proc_common/DisparityBilateralFilterConfig.h"
@@ -94,6 +98,8 @@ class VPIDisparityNodelet : public gpu_stereo_image_proc::DisparityNodeletBase {
   // typedef gpu_stereo_image_proc::DisparityWLSFilterConfig WLSFilterConfig;
   // boost::shared_ptr<dynamic_reconfigure::Server<WLSFilterConfig>>
   //     dyncfg_wls_filter_;
+
+  std::unique_ptr<code_timing::CodeTiming> code_timing_;
 
   // Processing state (note: only safe because we're single-threaded!)
   image_geometry::StereoCameraModel model_;
@@ -224,8 +230,13 @@ void VPIDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   image_geometry::StereoCameraModel scaled_model;
   scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
-  // Block matcher produces 16-bit signed (fixed point) disparity image
-  stereo_matcher_->compute(l_image, r_image);
+  {
+    auto timing = code_timing_->start_block("disparity_calculation",
+                                            "VPIDisparityNodelet");
+    // Block matcher produces 16-bit signed (fixed point) disparity image
+    stereo_matcher_->compute(l_image, r_image);
+  }
+
   cv::Mat disparityS16 = stereo_matcher_->disparity();
 
   // double mmin, mmax;
