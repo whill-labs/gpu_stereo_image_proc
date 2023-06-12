@@ -4,7 +4,8 @@ project(gpu_stereo_image_proc_visionworks)
 find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry
                 image_proc image_transport message_filters nodelet
                 sensor_msgs stereo_msgs
-                gpu_stereo_image_proc_common )
+                gpu_stereo_image_proc_common
+                code_timing )
 find_package(Boost REQUIRED COMPONENTS thread)
 
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")

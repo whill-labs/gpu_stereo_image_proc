@@ -54,6 +54,7 @@
 #include <memory>
 #include <opencv2/calib3d/calib3d.hpp>
 
+#include "code_timing/code_timing.h"
 #include "gpu_stereo_image_proc/nodelet_base.h"
 #include "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
 #include "gpu_stereo_image_proc/visionworks/vx_stereo_matcher.h"
@@ -90,6 +91,8 @@ class VXDisparityNodelet : public gpu_stereo_image_proc::DisparityNodeletBase {
   typedef gpu_stereo_image_proc::DisparityWLSFilterConfig WLSFilterConfig;
   boost::shared_ptr<dynamic_reconfigure::Server<WLSFilterConfig>>
       dyncfg_wls_filter_;
+
+  std::unique_ptr<code_timing::CodeTiming> code_timing_;
 
   VXStereoMatcherParams params_;
   std::shared_ptr<VXStereoMatcher> stereo_matcher_;
@@ -133,6 +136,8 @@ void VXDisparityNodelet::onInit() {
       boost::bind(&VXDisparityNodelet::configCb, this, _1, _2);
   reconfigure_server_.reset(new ReconfigureServer(private_nh));
   reconfigure_server_->setCallback(f);
+
+  code_timing_.reset(new code_timing::CodeTiming(nh));
 
   // Monitor whether anyone is subscribed to the output
   ros::SubscriberStatusCallback connect_cb =
@@ -209,10 +214,15 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   // If you **still** don't have a stereo matcher, give up...
   if (!stereo_matcher_) return;
 
-  // Block matcher produces 16-bit signed (fixed point) disparity image
-  stereo_matcher_->compute(l_image, r_image);
-  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
+  {
+    auto timing = code_timing_->start_block("disparity_calculation",
+                                            "VXDisparityNodelet");
 
+    // Block matcher produces 16-bit signed (fixed point) disparity image
+    stereo_matcher_->compute(l_image, r_image);
+  }
+
+  cv::Mat_<int16_t> disparityS16 = stereo_matcher_->disparity();
   DisparityImageGenerator dg(scaled_model_,
                              stereo_matcher_->params().min_disparity,
                              stereo_matcher_->params().max_disparity,
@@ -255,8 +265,13 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
 
   auto disparity_image(dg.generate(l_image_msg, disparityS16));
 
-  pub_disparity_.publish(disparity_image.getDisparity());
-  pub_depth_.publish(disparity_image.getDepth());
+  {
+    auto timing = code_timing_->start_block("disparity_output_generation",
+                                            "VXDisparityNodelet");
+
+    pub_disparity_.publish(disparity_image.getDisparity());
+    pub_depth_.publish(disparity_image.getDepth());
+  }
 
   scaled_left_camera_info_.publish(scaled_model_.left().cameraInfo());
   scaled_right_camera_info_.publish(scaled_model_.right().cameraInfo());
