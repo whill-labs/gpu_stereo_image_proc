@@ -55,12 +55,11 @@ using namespace std::chrono;
 #include <memory>
 #include <opencv2/calib3d/calib3d.hpp>
 
+#include "code_timing/code_timing.h"
 #include "gpu_stereo_image_proc/camera_info_conversions.h"
 #include "gpu_stereo_image_proc/msg_conversions.h"
 // #include
 // "gpu_stereo_image_proc/visionworks/vx_bidirectional_stereo_matcher.h"
-
-#include "code_timing/code_timing.h"
 #include "gpu_stereo_image_proc/nodelet_base.h"
 #include "gpu_stereo_image_proc/vpi/vpi_stereo_matcher.h"
 #include "gpu_stereo_image_proc_common/DisparityBilateralFilterConfig.h"
@@ -231,8 +230,8 @@ void VPIDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   scaled_model.fromCameraInfo(scaled_camera_info_l, scaled_camera_info_r);
 
   {
-    auto timing = code_timing_->start_block("disparity_calculation",
-                                            "VPIDisparityNodelet");
+    auto timing = code_timing_->startBlock("disparity_calculation",
+                                           "VPIDisparityNodelet");
     // Block matcher produces 16-bit signed (fixed point) disparity image
     stereo_matcher_->compute(l_image, r_image);
   }

@@ -215,8 +215,8 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   if (!stereo_matcher_) return;
 
   {
-    auto timing = code_timing_->start_block("disparity_calculation",
-                                            "VXDisparityNodelet");
+    auto timing =
+        code_timing_->startBlock("disparity_calculation", "VXDisparityNodelet");
 
     // Block matcher produces 16-bit signed (fixed point) disparity image
     stereo_matcher_->compute(l_image, r_image);
@@ -266,8 +266,8 @@ void VXDisparityNodelet::imageCallback(const ImageConstPtr &l_image_msg,
   auto disparity_image(dg.generate(l_image_msg, disparityS16));
 
   {
-    auto timing = code_timing_->start_block("disparity_output_generation",
-                                            "VXDisparityNodelet");
+    auto timing = code_timing_->startBlock("disparity_output_generation",
+                                           "VXDisparityNodelet");
 
     pub_disparity_.publish(disparity_image.getDisparity());
     pub_depth_.publish(disparity_image.getDepth());
