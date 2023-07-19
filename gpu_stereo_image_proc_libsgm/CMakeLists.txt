@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.1)
 project(gpu_stereo_image_proc_libsgm)
 
+if( NOT BUILD_GPU_STEREO_IMAGE_PROC_LIBSGM )
+  message(NOTICE "gpu_stereo_image_proc_libsgm is disabled by default.")
+  message(NOTICE "To enable:")
+  message(NOTICE "    catkin config --cmake-args -DBUILD_GPU_STEREO_IMAGE_PROC_LIBSGM=True")
+  message(NOTICE "")
+else()
+
 find_package(catkin REQUIRED cv_bridge dynamic_reconfigure image_geometry image_proc image_transport
                 message_filters nodelet sensor_msgs stereo_msgs gpu_stereo_image_proc_common)
 find_package(Boost REQUIRED COMPONENTS thread)
@@ -89,3 +96,6 @@ install(DIRECTORY launch
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
+
+
+endif()
