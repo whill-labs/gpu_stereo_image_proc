@@ -74,11 +74,18 @@ class DisparityNodeletBase : public nodelet::Nodelet {
   virtual bool hasSubscribers() const = 0;
   virtual int downsample() const = 0;
 
+  // The "true" image callback passed to the Subscriber
+  //
+  // It performs common overhead:
+  //    - initializing model_ and scaled_model_
+  //
+  // Then calls imageCallback(...)
   void imageCb(const ImageConstPtr &l_image_msg,
                const CameraInfoConstPtr &l_info_msg,
                const ImageConstPtr &r_image_msg,
                const CameraInfoConstPtr &r_info_msg);
 
+  // Virtual callback used by derived classes
   virtual void imageCallback(const ImageConstPtr &l_image_msg,
                              const CameraInfoConstPtr &l_info_msg,
                              const ImageConstPtr &r_image_msg,
