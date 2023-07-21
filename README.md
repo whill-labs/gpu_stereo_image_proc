@@ -1,19 +1,26 @@
 # gpu_stereo_image_proc
 
+> NOTE:  As this repo has increasing focused on [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), I've renamed the primary branch to `trisect-dev` and retired the previous `melodic-devel` branch.
+
 ## Overview
 
-This package provides a set of ROS nodelets for CUDA implementations of two Semi-Global (Block) Matching (i.e. SGM or SGBM) algorithms:
+As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x. with assumes the Trisect's customized [OpenCV and ROS1](https://gitlab.com/rsa-perception-sensor/trisect_environment) builds.
 
-* [NVIDIA VisionWorks](https://developer.nvidia.com/embedded/visionworks), and
-* [Fixstars libSGM](https://github.com/fixstars/libSGM)
+It includes ROS nodelets for CUDA implementations of the following Semi-Global (Block) Matching (i.e. SGM or SGBM) algorithms:
 
-With stubs for an OpenCV-based nodelet in process.
+* [NVIDIA VisionWorks](https://developer.nvidia.com/embedded/visionworks)
 
-This version is based on [whill-lab's](https://github.com/whill-labs) [upstream package](https://github.com/whill-labs/gpu_stereo_image_proc), but has diverged significantly in structure.
+With stubs for a VPI and pure-OpenCV versions in progress.  Each algorithm is in its own ROS package, compilation of individual packages can be disabled by adding them to the [Catkin skiplist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#buildlisting-and-skiplisting-packages):
 
-Each algorithm is in its own ROS package so individual packages can be disabled by adding them to the [Catkin blocklist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#whitelisting-and-blacklisting-packages).
+```
+catkin config --skiplist gpu_stereo_image_proc_opencv
+```
 
-As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x.   It also assumes the Trisect's customized [OpenCV](https://gitlab.com/apl-ocean-engineering/jetson/buildopencv) and [ROS](https://gitlab.com/apl-ocean-engineering/jetson/buildros1) builds.
+It also includes [Fixstars libSGM](https://github.com/fixstars/libSGM), however this ROS package is disabled by default.  It can be enabled by setting the CMake variable `BUILD_GPU_STEREO_IMAGE_PROC_LIBSGM`:
+
+```
+catkin config --cmake-args -DBUILD_GPU_STEREO_IMAGE_PROC_LIBSGM=True
+```
 
 ## Installation
 
@@ -21,33 +28,16 @@ Pull this repo into a catkin workspace and build
 
 ```sh
 cd <path-to-your-catkin-workspace>/src
-git clone https://github.com/WHILL/gpu_stereo_image_proc.git
+git clone https://github.com/apl-ocean-engineering/gpu_stereo_image_proc.git
 cd ..
 catkin build
 ```
 
-`gpu_stereo_image_proc_libsgm` will automatically pull in libSGM as an external project.
-
-
-## Usage
-
-### Nodelets
-
-This package contains nodelets for creating disparity images from stereo:
-
-* `gpu_stereo_image_proc_libsgm/libsgm_disparity`:  Nodelet which wraps Fixstars libSGM.
-* `gpu_stereo_image_proc_visionworks/vx_disparity`:  Nodelet which wraps NVIDIA VisionWorks.
-
-Basic usage of this package (e.g. subscribed/published topics, node structure) is compatible with [ros-perception/image_pipeline/stereo_image_proc](https://github.com/ros-perception/image_pipeline/tree/melodic/stereo_image_proc). Refer to its [wiki](http://wiki.ros.org/stereo_image_proc?distro=melodic) for quick start.
-
-### Parameters
-
-Most of the parameters can be configured via [dynamic reconfigure](http://wiki.ros.org/dynamic_reconfigure). These wiki pages describes configurable parameters.
-
-- [Parameter (libSGM)](https://github.com/WHILL/gpu_stereo_image_proc/wiki/Parameter-(libSGM))
-- [Parameter (VisionWorks)](https://github.com/WHILL/gpu_stereo_image_proc/wiki/Parameter-(VisionWorks))
+Note that since we are tuning for our Jetson-based Trisect platform, it assumes you have a fairly current, CUDA-enabled OpenCV and NVidia's Visionworks and VPI libraries.
 
 ## Licenses
+
+This version is based on [whill-lab's](https://github.com/whill-labs) [upstream package](https://github.com/whill-labs/gpu_stereo_image_proc), but has diverged significantly in structure.
 
 This software maintain's the upstream package's [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 
