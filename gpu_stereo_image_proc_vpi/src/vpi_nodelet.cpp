@@ -51,6 +51,7 @@ using namespace std::chrono;
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <stereo_msgs/DisparityImage.h>
+#include <vpi/Version.h>
 
 #include <memory>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -318,11 +319,22 @@ void VPIDisparityNodelet::configCb(Config &config, uint32_t level) {
   // confidence_threshold_ = config.confidence_threshold;
 
   params_.window_size = config.correlation_window_size;
-  params_.max_disparity = config.max_disparity;
-
   params_.downsample_log2 = config.downsample;
   params_.quality = config.quality;
   params_.confidence_threshold = config.confidence_threshold;
+
+#if NV_VPI_VERSION >= NV_VPI_MAKE_VERSION(1, 1, 0)
+  params_.max_disparity = config.max_disparity;
+#else
+  if (config.max_disparity > 64) {
+    ROS_WARN(
+        "!!! Max disparity for this version of VPI is 64.   Capping disparity "
+        "to 64");
+    params_.max_disparity = 64;
+  } else {
+    params_.max_disparity = config.max_disparity;
+  }
+#endif
 
   update_stereo_matcher();
 }

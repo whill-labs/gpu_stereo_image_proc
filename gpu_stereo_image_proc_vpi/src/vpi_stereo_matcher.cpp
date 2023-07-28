@@ -164,9 +164,8 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
   //     &create_params, &stereo_payload));
 
   VPIStereoDisparityEstimatorParams stereo_params;
-  stereo_params.windowSize = params_.window_size;
-  stereo_params.maxDisparity =
-      params_.max_disparity;  // 64; //params_.max_disparity;
+  stereo_params.windowSize = 5;  // params_.window_size;
+  stereo_params.maxDisparity = params_.max_disparity;
 
   // In the current generation of VPI, confidence is not
   // calculated.  This is fixed in later versions.
