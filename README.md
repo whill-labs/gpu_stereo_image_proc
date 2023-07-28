@@ -4,13 +4,14 @@
 
 ## Overview
 
-As this package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/), our primary development environment is the Jetson NX running Jetpack 4.4.x. with assumes the Trisect's customized [OpenCV and ROS1](https://gitlab.com/rsa-perception-sensor/trisect_environment) builds.
+This package provides the baseline stereo capabilities on our [Trisect underwater trifocal sensor](https://trisect-perception-sensor.gitlab.io/).  Given that focus, our primary development environment is the Jetson NX running Jetpack 4.4.x. with assumes the Trisect's customized [OpenCV and ROS1](https://gitlab.com/rsa-perception-sensor/trisect_environment) builds.
 
 It includes ROS nodelets for CUDA implementations of the following Semi-Global (Block) Matching (i.e. SGM or SGBM) algorithms:
 
 * [NVIDIA VisionWorks](https://developer.nvidia.com/embedded/visionworks)
+* NVIDIA VPI
 
-With stubs for a VPI and pure-OpenCV versions in progress.  Each algorithm is in its own ROS package, compilation of individual packages can be disabled by adding them to the [Catkin skiplist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#buildlisting-and-skiplisting-packages):
+With stubs for a pure-OpenCV version in progress.  Each algorithm is in its own ROS package, compilation of individual packages can be disabled by adding them to the [Catkin skiplist](https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_config.html#buildlisting-and-skiplisting-packages):
 
 ```
 catkin config --skiplist gpu_stereo_image_proc_opencv
@@ -21,6 +22,16 @@ It also includes [Fixstars libSGM](https://github.com/fixstars/libSGM), however 
 ```
 catkin config --cmake-args -DBUILD_GPU_STEREO_IMAGE_PROC_LIBSGM=True
 ```
+
+In summary:
+
+| Package | Current Status on Trisect |
+|---------|---------------------------|
+| gpu_stereo_image_proc_visionworks | Preferred version on Trisect.   Expect to be phased out in later version of Jetpack |
+| gpu_stereo_image_proc_vpi | Almost complete on Trisect, with limited functionality due to early version of VPI.   Expect this to be main focus of development going forward. |
+| gpu_stereo_image_proc_opencv | Not complete.|
+| gpu_stereo_image_proc_libsgm | **Deprecated.** Can be manually enabled. |
+
 
 ## Installation
 
