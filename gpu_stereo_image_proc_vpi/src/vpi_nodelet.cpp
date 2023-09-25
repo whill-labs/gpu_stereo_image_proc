@@ -323,6 +323,10 @@ void VPIDisparityNodelet::configCb(Config &config, uint32_t level) {
   params_.quality = config.quality;
   params_.confidence_threshold = config.confidence_threshold;
 
+  params_.p1 = config.P1;
+  params_.p2 = config.P2;
+  params_.uniqueness = config.uniqueness_ratio;
+
 #if NV_VPI_VERSION >= NV_VPI_MAKE_VERSION(1, 1, 0)
   params_.max_disparity = config.max_disparity;
 #else

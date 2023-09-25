@@ -69,6 +69,8 @@ struct VPIStereoMatcherParams {
   int max_disparity, window_size;
   int quality, confidence_threshold;
 
+  float p1, p2, uniqueness;
+
   DisparityFiltering_t filtering;
 
   void dump() const {

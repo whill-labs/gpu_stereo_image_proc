@@ -81,7 +81,7 @@ VPIStereoMatcher::VPIStereoMatcher(const VPIStereoMatcherParams &params)
 
   confidence8_m_ = cv::Mat(scaled_sz, CV_8UC1);
 
-  VPI_CHECK_STATUS(vpiImageCreateOpenCVMatWrapper(
+  VPI_CHECK_STATUS(vpiImageCreateWrapperOpenCVMat(
       confidence8_m_, VPI_IMAGE_FORMAT_U8, 0, &confidence8_));
 
   // vpiImageCreateOpenCVMatWrapper(disparity_m_, VPI_IMAGE_FORMAT_U16, 0,
@@ -96,6 +96,7 @@ VPIStereoMatcher::VPIStereoMatcher(const VPIStereoMatcherParams &params)
   ROS_INFO_STREAM("Max disparity: " << params_.max_disparity);
   VPIStereoDisparityEstimatorCreationParams create_params;
   create_params.maxDisparity = params_.max_disparity;
+  create_params.includeDiagonals = 1;
 
   VPI_CHECK_STATUS(vpiCreateStereoDisparityEstimator(
       VPI_BACKEND_CUDA, scaled_sz.width, scaled_sz.height, input_format,
@@ -122,9 +123,9 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
   VPIImage left, right;
 
   VPI_CHECK_STATUS(
-      vpiImageCreateOpenCVMatWrapper(left_input.getMat(), 0, &left));
+      vpiImageCreateWrapperOpenCVMat(left_input.getMat(), 0, &left));
   VPI_CHECK_STATUS(
-      vpiImageCreateOpenCVMatWrapper(right_input.getMat(), 0, &right));
+      vpiImageCreateWrapperOpenCVMat(right_input.getMat(), 0, &right));
 
   const int gaussian_filter_size = 5;
   const float gaussian_filter_sigma = 1.7;
@@ -164,8 +165,13 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
   //     &create_params, &stereo_payload));
 
   VPIStereoDisparityEstimatorParams stereo_params;
-  stereo_params.windowSize = 5;  // params_.window_size;
+  stereo_params.windowSize =
+      5;  // n.b. this is ignored on CUDA which uses 9x7 kernel
   stereo_params.maxDisparity = params_.max_disparity;
+  stereo_params.confidenceType = VPI_STEREO_CONFIDENCE_ABSOLUTE;
+  stereo_params.p1 = params_.p1;
+  stereo_params.p2 = params_.p2;
+  stereo_params.uniqueness = params_.uniqueness;
 
   // In the current generation of VPI, confidence is not
   // calculated.  This is fixed in later versions.
@@ -185,7 +191,8 @@ void VPIStereoMatcher::compute(cv::InputArray left_input,
 
   cv::Mat dispMat;
   VPIImageData disparityData;
-  vpiImageLock(disparity_, VPI_LOCK_READ, &disparityData);
+  vpiImageLockData(disparity_, VPI_LOCK_READ,
+                   VPI_IMAGE_BUFFER_CUDA_PITCH_LINEAR, &disparityData);
   vpiImageDataExportOpenCVMat(disparityData, &dispMat);
 
   double mmin, mmax;
