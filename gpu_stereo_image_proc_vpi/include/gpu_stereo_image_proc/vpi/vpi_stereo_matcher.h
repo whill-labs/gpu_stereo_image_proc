@@ -54,29 +54,25 @@ class VPIStereoMatcher {
 
   const VPIStereoMatcherParams &params() const { return params_; }
 
-  // cv::Mat scaledLeftRect() const { return vxImageToMatWrapper(left_scaled_);
-  // }
-
-  virtual cv::Mat disparity() const { return disparity_m_; }
-  virtual cv::Mat confidence() const { return confidence8_m_; }
+  // Note these perform a **DEEP COPY** from GPU memory to CPU memory
+  virtual cv::Mat disparity(); 
+  virtual cv::Mat confidence();
 
  protected:
   VPIPayload stereo_payload_;
   VPIStream stream_;
 
   // Scaled images (equal to {left|right}_image_ if not scaling)
-  VPIImage left_blurred_, right_blurred_, left_scaled_, right_scaled_;
-  VPIImage confidence_;
+  VPIImage left_blurred_, right_blurred_;
+  VPIImage left_scaled_, right_scaled_;
+  VPIImage confidence_, disparity_, disparity_filtered_;
 
-  // Output images, these wrap Mats
-  cv::Mat confidence8_m_, disparity_m_;
-  VPIImage confidence8_, disparity_;
+  VPIImage disparity_output_;
 
   VPIStereoMatcherParams params_;
 
+  // No default constructor, non-copyable
   VPIStereoMatcher() = delete;
-
-  // noncopyable
   VPIStereoMatcher(const VPIStereoMatcher &) = delete;
   VPIStereoMatcher &operator=(const VPIStereoMatcher &) = delete;
 };

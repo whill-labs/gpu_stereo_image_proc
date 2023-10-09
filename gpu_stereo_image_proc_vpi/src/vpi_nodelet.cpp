@@ -140,7 +140,8 @@ void VPIDisparityNodelet::onInit() {
   DisparityNodeletBase::onInit();
 
   // Use the single-threaded model.   There are really only two callbacks:
-  // config and new images.  Don't want to have to deconflict those
+  // dynamic reconfigure and new images.  We would never want them to run 
+  // simultaneously.
   ros::NodeHandle &nh = getNodeHandle();
   ros::NodeHandle &private_nh = getPrivateNodeHandle();
 
@@ -354,12 +355,7 @@ bool VPIDisparityNodelet::update_stereo_matcher() {
 
   params_.dump();
   ROS_WARN("Creating new stereo_matcher");
-  // if (params_.filtering == VXStereoMatcherParams::Filtering_WLS_LeftRight) {
-  //   ROS_INFO("Creating VXBidirectionalStereoMatcher");
-  //   stereo_matcher_.reset(new VXBidirectionalStereoMatcher(params_));
-  // } else {
   stereo_matcher_.reset(new VPIStereoMatcher(params_));
-  //}
   return true;
 }
 
